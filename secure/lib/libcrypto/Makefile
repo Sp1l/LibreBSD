@@ -1,11 +1,15 @@
 
 SHLIBDIR?=	/lib
+
+.include <src.opts.mk>
+
+.if ${MK_LIBRESSL} == "no"
+
 .if !defined(LIBCRYPTO_WITHOUT_SUBDIRS)
 SUBDIR=		engines modules
 .endif
 
 .include <bsd.own.mk>
-.include <src.opts.mk>
 
 PACKAGE=	openssl-lib
 LIB=		crypto
@@ -711,3 +715,7 @@ PICFLAG+=	-DOPENSSL_PIC
 	${LCRYPTO_SRC}/providers/implementations/storemgmt \
 	${LCRYPTO_SRC}/ssl \
 	${LCRYPTO_SRC}/ssl/record
+
+.else
+.include "Makefile.libressl"
+.endif # ${MK_LIBRESSL} != "no"

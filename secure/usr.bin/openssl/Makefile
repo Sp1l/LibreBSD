@@ -1,6 +1,11 @@
 
+.include <src.opts.mk>
+
 CONFS=	openssl.cnf
 CONFSDIR=	/etc/ssl
+
+.if ${MK_LIBRESSL} == "no"
+
 PROG=	openssl
 PACKAGE=	openssl
 
@@ -34,3 +39,7 @@ SRCS+=	lib/engine.c lib/engine_loader.c lib/app_libctx.c lib/tlssrp_depr.c
 
 .PATH:	${LCRYPTO_SRC}/apps \
 	${.CURDIR}/man
+
+.else
+.include "Makefile.libressl"
+.endif # ${MK_LIBRESSL} == "no"

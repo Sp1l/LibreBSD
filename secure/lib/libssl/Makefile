@@ -1,6 +1,8 @@
 
 .include <src.opts.mk>
 
+.if ${MK_LIBRESSL} == "no"
+
 LIB=		ssl
 SHLIB_MAJOR=	30
 VERSION_MAP=	${.CURDIR}/Version.map
@@ -48,3 +50,7 @@ PICFLAG+=	-DOPENSSL_PIC
 	${LCRYPTO_SRC}/ssl \
 	${LCRYPTO_SRC}/ssl/record \
 	${LCRYPTO_SRC}/ssl/statem
+
+.else
+.include "Makefile.libressl"
+.endif # ${MK_LIBRESSL} != "no"

@@ -1,6 +1,6 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-/* $FreeBSD$ */
+/* $FreeBSD: releng/12.2/usr.sbin/unbound/config.h 361457 2020-05-25 13:19:52Z cy $ */
 
 /* apply the noreturn attribute to a function that exits the program */
 #define ATTR_NORETURN __attribute__((__noreturn__))
@@ -83,11 +83,13 @@
 /* Define to 1 if you have the `chroot' function. */
 #define HAVE_CHROOT 1
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `CRYPTO_cleanup_all_ex_data' function. */
-/* #undef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA */
+#define HAVE_CRYPTO_CLEANUP_ALL_EX_DATA 1
 
 /* Define to 1 if you have the `CRYPTO_THREADID_set_callback' function. */
-/* #undef HAVE_CRYPTO_THREADID_SET_CALLBACK */
+#define HAVE_CRYPTO_THREADID_SET_CALLBACK 1
+#endif
 
 /* Define to 1 if you have the `ctime_r' function. */
 #define HAVE_CTIME_R 1
@@ -95,13 +97,15 @@
 /* Define to 1 if you have the `daemon' function. */
 #define HAVE_DAEMON 1
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
    don't. */
-/* #undef HAVE_DECL_ARC4RANDOM */
+#define HAVE_DECL_ARC4RANDOM 1
 
 /* Define to 1 if you have the declaration of `arc4random_uniform', and to 0
    if you don't. */
-/* #undef HAVE_DECL_ARC4RANDOM_UNIFORM */
+#define HAVE_DECL_ARC4RANDOM_UNIFORM 1
+#endif
 
 /* Define to 1 if you have the declaration of `evsignal_assign', and to 0 if
    you don't. */
@@ -121,11 +125,19 @@
 
 /* Define to 1 if you have the declaration of `NID_ED25519', and to 0 if you
    don't. */
+#ifdef WITH_LIBRESSL
+#define HAVE_DECL_NID_ED25519 0
+#else
 #define HAVE_DECL_NID_ED25519 1
+#endif
 
 /* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
    don't. */
+#ifdef WITH_LIBRESSL
+#define HAVE_DECL_NID_ED448 0
+#else
 #define HAVE_DECL_NID_ED448 1
+#endif
 
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
@@ -155,13 +167,15 @@
    0 if you don't. */
 #define HAVE_DECL_SSL_CTX_SET_ECDH_AUTO 1
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the declaration of `strlcat', and to 0 if you
    don't. */
-/* #undef HAVE_DECL_STRLCAT */
+#define HAVE_DECL_STRLCAT 1
 
 /* Define to 1 if you have the declaration of `strlcpy', and to 0 if you
    don't. */
-/* #undef HAVE_DECL_STRLCPY */
+#define HAVE_DECL_STRLCPY 1
+#endif
 
 /* Define to 1 if you have the declaration of `XML_StopParser', and to 0 if
    you don't. */
@@ -187,6 +201,17 @@
 
 /* Define to 1 if you have the `ENGINE_cleanup' function. */
 /* #undef HAVE_ENGINE_CLEANUP */
+#ifdef WITH_LIBRESSL
+/* Define to 1 if you have the `ENGINE_cleanup' function. */
+#define HAVE_ENGINE_CLEANUP 1
+
+/* Define to 1 if you have the `ERR_free_strings' function. */
+#define HAVE_ERR_FREE_STRINGS 1
+
+/* Define to 1 if you have the `ERR_load_crypto_strings' function. */
+#define HAVE_ERR_LOAD_CRYPTO_STRINGS 1
+#endif
+>>>>>>> 92d30bdfb9ba (contrib/unbound: Fix build with LibreSSL)
 
 /* Define to 1 if you have the `ERR_free_strings' function. */
 /* #undef HAVE_ERR_FREE_STRINGS */
@@ -215,14 +240,20 @@
 /* Define to 1 if you have the `EVP_aes_256_cbc' function. */
 #define HAVE_EVP_AES_256_CBC 1
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `EVP_cleanup' function. */
-/* #undef HAVE_EVP_CLEANUP */
+#define HAVE_EVP_CLEANUP 1
+#endif
 
+#ifndef WITH_LIBRESSL
 /* Define to 1 if you have the `EVP_DigestVerify' function. */
 #define HAVE_EVP_DIGESTVERIFY 1
+#endif
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `EVP_dss1' function. */
-/* #undef HAVE_EVP_DSS1 */
+#define HAVE_EVP_DSS1 1
+#endif
 
 /* Define to 1 if you have the `EVP_EncryptInit_ex' function. */
 #define HAVE_EVP_ENCRYPTINIT_EX 1
@@ -257,8 +288,10 @@
 /* Define to 1 if you have the `fcntl' function. */
 #define HAVE_FCNTL 1
 
+#ifndef WITH_LIBRESSL
 /* Define to 1 if you have the `FIPS_mode' function. */
 #define HAVE_FIPS_MODE 1
+#endif
 
 /* Define to 1 if you have the `fork' function. */
 #define HAVE_FORK 1
@@ -347,8 +380,10 @@
 /* Define to 1 if you have the <libkern/OSByteOrder.h> header file. */
 /* #undef HAVE_LIBKERN_OSBYTEORDER_H */
 
+#ifdef WITH_LIBRESSL
 /* Define if we have LibreSSL */
-/* #undef HAVE_LIBRESSL */
+#define HAVE_LIBRESSL 1
+#endif
 
 /* Define to 1 if you have the `localtime_r' function. */
 #define HAVE_LOCALTIME_R 1
@@ -395,8 +430,10 @@
 /* Use libnss for crypto */
 /* #undef HAVE_NSS */
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `OpenSSL_add_all_digests' function. */
-/* #undef HAVE_OPENSSL_ADD_ALL_DIGESTS */
+#define HAVE_OPENSSL_ADD_ALL_DIGESTS 1
+#endif
 
 /* Define to 1 if you have the <openssl/bn.h> header file. */
 #define HAVE_OPENSSL_BN_H 1
@@ -458,8 +495,10 @@
 /* Define to 1 if you have the `random' function. */
 #define HAVE_RANDOM 1
 
+#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `RAND_cleanup' function. */
-/* #undef HAVE_RAND_CLEANUP */
+#define HAVE_RAND_CLEANUP 1
+#endif
 
 /* If we have reallocarray(3) */
 #define HAVE_REALLOCARRAY 1
@@ -521,6 +560,7 @@
 /* Define to 1 if you have the `SSL_CTX_set_alpn_select_cb' function. */
 #define HAVE_SSL_CTX_SET_ALPN_SELECT_CB 1
 
+#ifndef WITH_LIBRESSL
 /* Define to 1 if you have the `SSL_CTX_set_ciphersuites' function. */
 #define HAVE_SSL_CTX_SET_CIPHERSUITES 1
 
@@ -533,6 +573,7 @@
 
 /* Define to 1 if you have the `SSL_get0_peername' function. */
 #define HAVE_SSL_GET0_PEERNAME 1
+#endif
 
 /* Define to 1 if you have the `SSL_set1_host' function. */
 #define HAVE_SSL_SET1_HOST 1
@@ -838,14 +879,17 @@
 /* Define this to enable an EVP workaround for older openssl */
 /* #undef USE_ECDSA_EVP_WORKAROUND */
 
+#ifndef WITH_LIBRESSL
 /* Define this to enable ED25519 support. */
 #define USE_ED25519 1
 
 /* Define this to enable ED448 support. */
 #define USE_ED448 1
+#else
 
 /* Define this to enable GOST support. */
-/* #undef USE_GOST */
+#define USE_GOST 1
+#endif
 
 /* Define to 1 to use ipsecmod support. */
 /* #undef USE_IPSECMOD */

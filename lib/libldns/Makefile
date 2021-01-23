@@ -1,5 +1,7 @@
 # $FreeBSD$
 
+.include <src.opts.mk>
+
 # Vendor sources and generated files
 LDNSDIR = ${SRCTOP}/contrib/ldns
 
@@ -10,6 +12,9 @@ LIB=	ldns
 PRIVATELIB= true
 
 CFLAGS+= -I${LDNSDIR}
+.if ${MK_LIBRESSL} != "no"
+CFLAGS+= -DWITH_LIBRESSL=YES
+.endif
 
 SRCS=	buffer.c dane.c dname.c dnssec.c dnssec_sign.c dnssec_verify.c \
 	dnssec_zone.c duration.c error.c higher.c host2str.c host2wire.c \

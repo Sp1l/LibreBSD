@@ -1,4 +1,4 @@
-/*	$OpenBSD: client.c,v 1.105 2017/05/30 23:30:48 benno Exp $ */
+/*	$OpenBSD: client.c,v 1.114 2020/09/11 07:09:41 otto Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -29,6 +29,8 @@
 #include "ntpd.h"
 
 int	client_update(struct ntp_peer *);
+int	auto_cmp(const void *, const void *);
+void	handle_auto(u_int8_t, double);
 void	set_deadline(struct ntp_peer *, time_t);
 
 void
@@ -112,11 +114,13 @@ client_nextaddr(struct ntp_peer *p)
 		return (-1);
 	}
 
-	if (p->addr == NULL || (p->addr = p->addr->next) == NULL)
-		p->addr = p->addr_head.a;
-
 	p->shift = 0;
 	p->trustlevel = TRUSTLEVEL_PATHETIC;
+
+	if (p->addr == NULL)
+		p->addr = p->addr_head.a;
+	else if ((p->addr = p->addr->next) == NULL)
+		return (1);
 
 	return (0);
 }
@@ -127,8 +131,17 @@ client_query(struct ntp_peer *p)
 	int	val;
 
 	if (p->addr == NULL && client_nextaddr(p) == -1) {
-		set_next(p, MAXIMUM(SETTIME_TIMEOUT,
-		    scale_interval(INTERVAL_QUERY_AGGRESSIVE)));
+		if (conf->settime)
+			set_next(p, INTERVAL_AUIO_DNSFAIL);
+		else
+			set_next(p, MAXIMUM(SETTIME_TIMEOUT,
+			    scale_interval(INTERVAL_QUERY_AGGRESSIVE)));
+		return (0);
+	}
+
+	if (conf->status.synced && p->addr->notauth) {
+		peer_addr_head_clear(p);
+		client_nextaddr(p);
 		return (0);
 	}
 
@@ -164,9 +177,14 @@ client_query(struct ntp_peer *p)
 		if (connect(p->query->fd, sa, SA_LEN(sa)) == -1) {
 			if (errno == ECONNREFUSED || errno == ENETUNREACH ||
 			    errno == EHOSTUNREACH || errno == EADDRNOTAVAIL) {
+				/* cycle through addresses, but do increase
+				   senderrors */
 				client_nextaddr(p);
+				if (p->addr == NULL)
+					p->addr = p->addr_head.a;
 				set_next(p, MAXIMUM(SETTIME_TIMEOUT,
 				    scale_interval(INTERVAL_QUERY_AGGRESSIVE)));
+				p->senderrors++;
 				return (-1);
 			} else
 				fatal("client_query connect");
@@ -216,7 +234,53 @@ client_query(struct ntp_peer *p)
 }
 
 int
-client_dispatch(struct ntp_peer *p, u_int8_t settime)
+auto_cmp(const void *a, const void *b)
+{
+	double at = *(const double *)a;
+	double bt = *(const double *)b;
+	return at < bt ? -1 : (at > bt ? 1 : 0);
+}
+
+void
+handle_auto(uint8_t trusted, double offset)
+{
+	static int count;
+	static double v[AUTO_REPLIES];
+
+	/*
+	 * It happens the (constraint) resolves initially fail, don't give up
+	 * but see if we get validated replies later.
+	 */
+	if (!trusted && conf->constraint_median == 0)
+		return;
+
+	if (offset < AUTO_THRESHOLD) {
+		/* don't bother */
+		priv_settime(0, "offset is negative or close enough");
+		return;
+	}
+	/* collect some more */
+	v[count++] = offset;
+	if (count < AUTO_REPLIES)
+		return;
+	
+	/* we have enough */
+	qsort(v, count, sizeof(double), auto_cmp);
+	if (AUTO_REPLIES % 2 == 0)
+		offset = (v[AUTO_REPLIES / 2 - 1] + v[AUTO_REPLIES / 2]) / 2;
+	else
+		offset = v[AUTO_REPLIES / 2];
+	priv_settime(offset, "");
+}
+
+
+/*
+ * -1: Not processed, not an NTP message (e.g. icmp induced  ECONNREFUSED)
+ *  0: Not prrocessed due to validation issues
+ *  1: NTP message validated and processed
+ */
+int
+client_dispatch(struct ntp_peer *p, u_int8_t settime, u_int8_t automatic)
 {
 	struct ntp_msg		 msg;
 	struct msghdr		 somsg;
@@ -231,7 +295,7 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 	struct cmsghdr		*cmsg;
 #endif
 	ssize_t			 size;
-	double			 T1, T2, T3, T4;
+	double			 T1, T2, T3, T4, offset, delay;
 	time_t			 interval;
 
 	memset(&somsg, 0, sizeof(somsg));
@@ -249,7 +313,7 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 		    errno == ENOPROTOOPT || errno == ENOENT) {
 			client_log_error(p, "recvmsg", errno);
 			set_next(p, error_interval());
-			return (0);
+			return (-1);
 		} else
 			fatal("recvfrom");
 	}
@@ -280,12 +344,6 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 #else
 	T4 = gettime_corrected();
 #endif
-
-	if (T4 < JAN_1970) {
-		client_log_error(p, "recvmsg control format", EBADF);
-		set_next(p, error_interval());
-		return (0);
-	}
 
 	ntp_getmsg((struct sockaddr *)&p->addr->ss, buf, size, &msg);
 
@@ -332,18 +390,8 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 	T2 = lfp_to_d(msg.rectime);
 	T3 = lfp_to_d(msg.xmttime);
 
-	/*
-	 * XXX workaround: time_t / tv_sec must never wrap.
-	 * around 2020 we will need a solution (64bit time_t / tv_sec).
-	 * consider every answer with a timestamp beyond january 2030 bogus.
-	 */
-	if (T2 > JAN_2030 || T3 > JAN_2030) {
-		set_next(p, error_interval());
-		return (0);
-	}
-
 	/* Detect liars */
-	if (conf->constraint_median != 0 &&
+	if (!p->trusted && conf->constraint_median != 0 &&
 	    (constraint_check(T2) != 0 || constraint_check(T3) != 0)) {
 		log_info("reply from %s: constraint check failed",
 		    log_sockaddr((struct sockaddr *)&p->addr->ss));
@@ -391,14 +439,6 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 	} else
 		p->reply[p->shift].status.send_refid = msg.xmttime.fractionl;
 
-	if (p->trustlevel < TRUSTLEVEL_PATHETIC)
-		interval = scale_interval(INTERVAL_QUERY_PATHETIC);
-	else if (p->trustlevel < TRUSTLEVEL_AGGRESSIVE)
-		interval = scale_interval(INTERVAL_QUERY_AGGRESSIVE);
-	else
-		interval = scale_interval(INTERVAL_QUERY_NORMAL);
-
-	set_next(p, interval);
 	p->state = STATE_REPLY_RECEIVED;
 
 	/* every received reply which we do not discard increases trust */
@@ -410,20 +450,38 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 		p->trustlevel++;
 	}
 
+	offset = p->reply[p->shift].offset;
+	delay = p->reply[p->shift].delay;
+
+	client_update(p);
+	if (settime) {
+		if (automatic)
+			handle_auto(p->trusted, p->reply[p->shift].offset);
+		else
+			priv_settime(p->reply[p->shift].offset, "");
+	}
+
+	if (p->trustlevel < TRUSTLEVEL_PATHETIC)
+		interval = scale_interval(INTERVAL_QUERY_PATHETIC);
+	else if (p->trustlevel < TRUSTLEVEL_AGGRESSIVE)
+		interval = (conf->settime && conf->automatic) ?
+		    INTERVAL_QUERY_ULTRA_VIOLENCE :
+		    scale_interval(INTERVAL_QUERY_AGGRESSIVE);
+	else
+		interval = scale_interval(INTERVAL_QUERY_NORMAL);
+
 	log_debug("reply from %s: offset %f delay %f, "
 	    "next query %llds",
 	    log_sockaddr((struct sockaddr *)&p->addr->ss),
-	    p->reply[p->shift].offset, p->reply[p->shift].delay,
+	    offset, delay,
 	    (long long)interval);
 
-	client_update(p);
-	if (settime)
-		priv_settime(p->reply[p->shift].offset);
+	set_next(p, interval);
 
 	if (++p->shift >= OFFSET_ARRAY_SIZE)
 		p->shift = 0;
 
-	return (0);
+	return (1);
 }
 
 int

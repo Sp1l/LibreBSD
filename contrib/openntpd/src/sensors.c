@@ -1,4 +1,4 @@
-/*	$OpenBSD: sensors.c,v 1.52 2016/09/03 11:52:06 reyk Exp $ */
+/*	$OpenBSD: sensors.c,v 1.54 2019/11/11 06:32:52 otto Exp $ */
 
 /*
  * Copyright (c) 2006 Henning Brauer <henning@openbsd.org>
@@ -134,6 +134,7 @@ sensor_add(int sensordev, char *dxname)
 	s->weight = cs->weight;
 	s->correction = cs->correction;
 	s->stratum = cs->stratum - 1;
+	s->trusted = cs->trusted;
 	if ((s->device = strdup(dxname)) == NULL)
 		fatal("sensor_add strdup");
 	s->sensordevid = sensordev;
@@ -165,6 +166,7 @@ sensor_query(struct ntp_sensor *s)
 {
 	char		 dxname[MAXDEVNAMLEN];
 	struct sensor	 sensor;
+	double		 sens_time;
 
 	if (conf->settime)
 		s->next = getmonotime() + SENSOR_QUERY_INTERVAL_SETTIME;
@@ -193,6 +195,18 @@ sensor_query(struct ntp_sensor *s)
 		return;
 
 	s->last = sensor.tv.tv_sec;
+	
+	if (!s->trusted && !TAILQ_EMPTY(&conf->constraints)) {
+		if (conf->constraint_median == 0) {
+			return;
+		}
+		sens_time = gettime() + (sensor.value / -1e9) +
+		    (s->correction / 1e6);
+		if (constraint_check(sens_time) != 0) {
+			log_info("sensor %s: constraint check failed", s->device);
+			return;
+		}
+	}
 	/*
 	 * TD = device time
 	 * TS = system time

@@ -1,4 +1,4 @@
-/*	$OpenBSD: ntpd.c,v 1.113 2017/01/09 14:49:22 reyk Exp $ */
+/*	$OpenBSD: ntpd.c,v 1.129 2020/02/12 19:14:56 otto Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -17,9 +17,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef HAVE_ADJTIMEX
+#include <sys/timex.h>
+#endif
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
+#ifdef KERN_SECURELVL
+#include <sys/sysctl.h>
+#endif
 #include <sys/wait.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -31,6 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <tls.h>
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -40,6 +47,7 @@
 
 void		sighdlr(int);
 __dead void	usage(void);
+int		auto_preconditions(const struct ntpd_conf *);
 int		main(int, char *[]);
 void		check_child(void);
 int		dispatch_imsg(struct ntpd_conf *, int, char **);
@@ -109,9 +117,25 @@ usage(void)
 		fprintf(stderr,
 		    "usage: ntpctl -s all | peers | Sensors | status\n");
 	else
-		fprintf(stderr, "usage: %s [-dnSsv] [-f file] [-p file]\n",
+		fprintf(stderr, "usage: %s [-dnv] [-f file] [-p file]\n",
 		    __progname);
 	exit(1);
+}
+
+int
+auto_preconditions(const struct ntpd_conf *cnf)
+{
+	int constraints, securelevel = 0;
+
+#ifdef KERN_SECURELVL
+	int mib[2] = { CTL_KERN, KERN_SECURELVL };
+	size_t sz = sizeof(int);
+	if (sysctl(mib, 2, &securelevel, &sz, NULL, 0) == -1)
+		err(1, "sysctl");
+#endif
+	constraints = !TAILQ_EMPTY(&cnf->constraints);
+	return !cnf->settime && (constraints || cnf->trusted_peers ||
+	    conf->trusted_sensors) && securelevel == 0;
 }
 
 #define POLL_MAX		8
@@ -139,9 +163,11 @@ main(int argc, char *argv[])
 	struct constraint	*cstr;
 	struct passwd		*pw;
 	void			*newp;
-	int			argc0 = argc;
+	int			argc0 = argc, logdest;
 	char			**argv0 = argv;
 	char			*pname = NULL;
+	time_t			 settime_deadline = 0;
+	int			 sopt = 0;
 
 	__progname = get_progname(argv[0]);
 
@@ -168,13 +194,13 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "df:np:P:sSv")) != -1) {
 		switch (ch) {
 		case 'd':
-			lconf.debug = 2;
+			lconf.debug = 1;
 			break;
 		case 'f':
 			conffile = optarg;
 			break;
 		case 'n':
-			lconf.debug = 2;
+			lconf.debug = 1;
 			lconf.noaction = 1;
 			break;
 		case 'P':
@@ -184,10 +210,8 @@ main(int argc, char *argv[])
 			lconf.pid_file = optarg;
 			break;
 		case 's':
-			lconf.settime = 1;
-			break;
 		case 'S':
-			lconf.settime = 0;
+			sopt = ch;
 			break;
 		case 'v':
 			lconf.verbose++;
@@ -199,7 +223,17 @@ main(int argc, char *argv[])
 	}
 
 	/* log to stderr until daemonized */
-	log_init(lconf.debug ? lconf.debug : 1, LOG_DAEMON);
+	logdest = LOG_TO_STDERR;
+	if (!lconf.debug)
+		logdest |= LOG_TO_SYSLOG;
+
+	log_init(logdest, lconf.verbose, LOG_DAEMON);
+
+	if (sopt) {
+		log_warnx("-%c option no longer works and will be removed soon.",
+		    sopt);
+		log_warnx("Please reconfigure to use constraints or trusted servers.");
+	}
 
 	argc -= optind;
 	argv += optind;
@@ -220,6 +254,10 @@ main(int argc, char *argv[])
 	if ((pw = getpwnam(NTPD_USER)) == NULL)
 		errx(1, "unknown user %s", NTPD_USER);
 
+	lconf.automatic = auto_preconditions(&lconf);
+	if (lconf.automatic)
+		lconf.settime = 1;
+
 	if (pname != NULL) {
 		/* Remove our proc arguments, so child doesn't need to. */
 		if (sanitize_argv(&argc0, &argv0) == -1)
@@ -237,26 +275,34 @@ main(int argc, char *argv[])
 			    pname);
 
 		fatalx("%s: process '%s' failed", __func__, pname);
+	} else {
+		if ((control_check(CTLSOCKET)) == -1)
+			fatalx("ntpd already running");
 	}
 
 	if (setpriority(PRIO_PROCESS, 0, -20) == -1)
 		warn("can't set priority");
-
 	reset_adjtime();
+
+	logdest = lconf.debug ? LOG_TO_STDERR : LOG_TO_SYSLOG;
 	if (!lconf.settime) {
-		log_init(lconf.debug, LOG_DAEMON);
-		log_setverbose(lconf.verbose);
+		log_init(logdest, lconf.verbose, LOG_DAEMON);
 		if (!lconf.debug) {
 			if (daemon(1, 0))
 				fatal("daemon");
 			writepid(&lconf);
 		}
-	} else
-		timeout = SETTIME_TIMEOUT * 1000;
+	} else {
+		settime_deadline = getmonotime();
+		timeout = 100;
+	}
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC,
 	    pipe_chld) == -1)
 		fatal("socketpair");
+
+	if (chdir("/") == -1)
+		fatal("chdir(\"/\")");
 
 	signal(SIGCHLD, sighdlr);
 
@@ -282,6 +328,10 @@ main(int argc, char *argv[])
 	 * Constraint processes are forked with certificates in memory,
 	 * then privdrop into chroot before speaking to the outside world.
 	 */
+	if (unveil(tls_default_ca_cert_file(), "r") == -1)
+		err(1, "unveil");
+	if (unveil("/usr/sbin/ntpd", "x") == -1)
+		err(1, "unveil");
 	if (pledge("stdio rpath inet settime proc exec id", NULL) == -1)
 		err(1, "pledge");
 
@@ -318,11 +368,11 @@ main(int argc, char *argv[])
 				quit = 1;
 			}
 
-		if (nfds == 0 && lconf.settime) {
+		if (nfds == 0 && lconf.settime &&
+		    getmonotime() > settime_deadline + SETTIME_TIMEOUT) {
 			lconf.settime = 0;
 			timeout = INFTIM;
-			log_init(lconf.debug, LOG_DAEMON);
-			log_setverbose(lconf.verbose);
+			log_init(logdest, lconf.verbose, LOG_DAEMON);
 			log_warnx("no reply received in time, skipping initial "
 			    "time setting");
 			if (!lconf.debug) {
@@ -425,8 +475,8 @@ dispatch_imsg(struct ntpd_conf *lconf, int argc, char **argv)
 				fatalx("invalid IMSG_SETTIME received");
 			if (!lconf->settime)
 				break;
-			log_init(lconf->debug, LOG_DAEMON);
-			log_setverbose(lconf->verbose);
+			log_init(lconf->debug ? LOG_TO_STDERR : LOG_TO_SYSLOG,
+			    lconf->verbose, LOG_DAEMON);
 			memcpy(&d, imsg.data, sizeof(d));
 			ntpd_settime(d);
 			/* daemonize now */
@@ -467,21 +517,44 @@ reset_adjtime(void)
 int
 ntpd_adjtime(double d)
 {
-	struct timeval	tv, olddelta;
 	int		synced = 0;
 	static int	firstadj = 1;
+	double threshold = (double)LOG_NEGLIGIBLE_ADJTIME / 1000;
 
 	d += getoffset();
-	if (d >= (double)LOG_NEGLIGIBLE_ADJTIME / 1000 ||
-	    d <= -1 * (double)LOG_NEGLIGIBLE_ADJTIME / 1000)
+	if (d >= threshold || d <= -1 * threshold)
 		log_info("adjusting local clock by %fs", d);
 	else
 		log_debug("adjusting local clock by %fs", d);
+
+#ifdef HAVE_ADJTIMEX
+	int rc;
+
+	long offset = d * 1000000;
+	struct timex tx = { 0 };
+	tx.offset = offset;
+	tx.modes = ADJ_OFFSET_SINGLESHOT | ADJ_STATUS;
+
+	do {
+		rc = adjtimex(&tx);
+	} while (rc == TIME_ERROR && (tx.offset /= 2) > threshold);
+
+	if (rc == TIME_ERROR) {
+		if ((tx.status & ~STA_UNSYNC))
+			log_warn("adjtimex returned TIME_ERROR");
+	} else if (rc < 0) {
+		log_warn("adjtimex failed");
+	} else if (!firstadj && tx.offset == 0) {
+		synced = 1;
+	}
+#else
+	struct timeval	tv, olddelta;
 	d_to_tv(d, &tv);
 	if (adjtime(&tv, &olddelta) == -1)
 		log_warn("adjtime failed");
 	else if (!firstadj && olddelta.tv_sec == 0 && olddelta.tv_usec == 0)
 		synced = 1;
+#endif
 	firstadj = 0;
 	update_time_sync_status(synced);
 	return (synced);
@@ -528,6 +601,9 @@ ntpd_settime(double d)
 	struct timeval	tv, curtime;
 	char		buf[80];
 	time_t		tval;
+
+	if (d == 0)
+		return;
 
 	if (gettimeofday(&curtime, NULL) == -1) {
 		log_warn("gettimeofday");
@@ -812,7 +888,8 @@ show_status_msg(struct imsg *imsg)
 			printf(" (%d errors)",
 			    cstatus->constraint_errors);
 		printf(", ");
-	}
+	} else if (cstatus->constraints)
+		printf("constraints configured but none available, ");
 
 	if (cstatus->peercnt + cstatus->sensorcnt == 0)
 		printf("no peers and no sensors configured\n");
@@ -836,7 +913,7 @@ show_peer_msg(struct imsg *imsg, int calledfromshowall)
 {
 	struct ctl_show_peer	*cpeer;
 	int			 cnt;
-	char			 stratum[3];
+	char			 stratum[4];
 	static int		 firsttime = 1;
 
 	if (imsg->hdr.type == IMSG_CTL_SHOW_PEERS_END) {

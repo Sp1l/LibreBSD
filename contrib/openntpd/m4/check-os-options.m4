@@ -25,6 +25,7 @@ case $host_os in
 		AC_DEFINE(BROKEN_SETREGID,[], [Broken setregid])
 		AC_DEFINE(YYSTYPE_IS_DECLARED,[], [Broken bison])
 		AC_DEFINE([SPT_TYPE], [SPT_REUSEARGV])
+		AC_SUBST([PROG_LDADD], ['-lresolv'])
 		;;
 	*freebsd*)
 		HOST_OS=freebsd
@@ -49,6 +50,7 @@ case $host_os in
 		HOST_ABI=elf
 		CPPFLAGS="$CPPFLAGS -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_SOURCE -D_GNU_SOURCE"
 		AC_DEFINE([SPT_TYPE], [SPT_REUSEARGV])
+		AC_SUBST([PROG_LDADD], ['-lresolv'])
 		;;
 	*netbsd*)
 		HOST_OS=netbsd
@@ -69,12 +71,13 @@ case $host_os in
 		HOST_ABI=elf
 		AC_DEFINE([HAVE_ATTRIBUTE__BOUNDED__], [1], [OpenBSD gcc has bounded])
 		AC_DEFINE([HAVE_ATTRIBUTE__DEAD], [1], [OpenBSD gcc has __dead])
+		AC_DEFINE([HAVE_ATTRIBUTE__PACKED], [1], [OpenBSD gcc has __packed])
 		;;
 	*solaris*)
 		HOST_OS=solaris
 		HOST_ABI=elf
 		CPPFLAGS="$CPPFLAGS -D__EXTENSIONS__ -D_XOPEN_SOURCE=600 -DBSD_COMP"
-		AC_SUBST([PLATFORM_LDADD], ['-lnsl -lsocket'])
+		AC_SUBST([PLATFORM_LDADD], ['-lresolv -lsocket -lnsl'])
 		;;
 	*) ;;
 esac

@@ -1,5 +1,7 @@
 # $FreeBSD$
 
+.include <src.opts.mk>
+
 PACKAGE=lib${LIB}
 # Vendor sources and generated files
 LDNSDIR= ${SRCTOP}/contrib/ldns
@@ -14,6 +16,9 @@ PACKAGE=	unbound
 
 CFLAGS+= -I${UNBOUNDDIR} -I${LDNSDIR} -I${.OBJDIR}
 CFLAGS+= -I${SRCTOP}/usr.sbin/unbound
+.if ${MK_LIBRESSL} != "no"
+CFLAGS+= -DWITH_LIBRESSL=YES
+.endif
 
 SRCS=	alloc.c as112.c authzone.c autotrust.c cachedb.c config_file.c \
 	configlexer.l configparser.y context.c dname.c dns.c dns64.c \

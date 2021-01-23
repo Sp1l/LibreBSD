@@ -1,7 +1,12 @@
 # $FreeBSD$
 
+.include <src.opts.mk>
+
 CONFS=	openssl.cnf
 CONFSDIR=	/etc/ssl
+
+.if ${MK_LIBRESSL} == "no"
+
 PROG=	openssl
 
 LIBADD=	ssl crypto
@@ -26,3 +31,7 @@ SRCS+=	spkac.c srp.c storeutl.c ts.c verify.c version.c x509.c
 
 .PATH:	${LCRYPTO_SRC}/apps \
 	${.CURDIR}/man
+
+.else
+.include "Makefile.libressl"
+.endif # ${MK_LIBRESSL} == "no"

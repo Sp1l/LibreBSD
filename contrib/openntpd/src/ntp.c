@@ -1,4 +1,4 @@
-/*	$OpenBSD: ntp.c,v 1.146 2017/05/30 23:30:48 benno Exp $ */
+/*	$OpenBSD: ntp.c,v 1.167 2020/09/11 07:09:41 otto Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -42,7 +42,7 @@
 
 volatile sig_atomic_t	 ntp_quit = 0;
 struct imsgbuf		*ibuf_main;
-struct imsgbuf		*ibuf_dns;
+static struct imsgbuf	*ibuf_dns;
 struct ntpd_conf	*conf;
 struct ctl_conns	 ctl_conns;
 u_int			 peer_cnt;
@@ -54,6 +54,8 @@ int	ntp_dispatch_imsg(void);
 int	ntp_dispatch_imsg_dns(void);
 void	peer_add(struct ntp_peer *);
 void	peer_remove(struct ntp_peer *);
+int	inpool(struct sockaddr_storage *,
+	    struct sockaddr_storage[MAX_SERVERS_DNS], size_t);
 
 void
 ntp_sighdlr(int sig)
@@ -87,6 +89,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 	struct stat		 stb;
 	struct ctl_conn		*cc;
 	time_t			 nextaction, last_sensor_scan = 0, now;
+	time_t			 last_action = 0, interval;
 	void			*newp;
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC,
@@ -95,12 +98,10 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 
 	start_child(NTPDNS_PROC_NAME, pipe_dns[1], argc, argv);
 
-	/* in this case the parent didn't init logging and didn't daemonize */
-	if (nconf->settime && !nconf->debug) {
-		log_init(nconf->debug, LOG_DAEMON);
-		if (setsid() == -1)
-			fatal("setsid");
-	}
+	log_init(nconf->debug ? LOG_TO_STDERR : LOG_TO_SYSLOG, nconf->verbose,
+	    LOG_DAEMON);
+	if (!nconf->debug && setsid() == -1)
+		fatal("setsid");
 	log_procinit("ntp");
 
 	if ((se = getservbyname("ntp", "udp")) == NULL)
@@ -119,7 +120,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 	}
 	if (stb.st_uid != 0 || (stb.st_mode & (S_IWGRP|S_IWOTH)) != 0) {
 		fatalx("bad privsep dir %s permissions: %o",
-		    pw->pw_dir, stb.st_mode);
+		    pw->pw_dir, (unsigned int)stb.st_mode);
 	}
 	if (chroot(pw->pw_dir) == -1)
 		fatal("chroot");
@@ -228,7 +229,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 
 		memset(pfd, 0, sizeof(*pfd) * pfd_elms);
 		memset(idx2peer, 0, sizeof(*idx2peer) * idx2peer_elms);
-		nextaction = getmonotime() + 3600;
+		nextaction = getmonotime() + 900;
 		pfd[PFD_PIPE_MAIN].fd = ibuf_main->fd;
 		pfd[PFD_PIPE_MAIN].events = POLLIN;
 		pfd[PFD_PIPE_DNS].fd = ibuf_dns->fd;
@@ -246,7 +247,8 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		idx_peers = i;
 		sent_cnt = trial_cnt = 0;
 		TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
-			if (constraint_cnt && conf->constraint_median == 0)
+			if (!p->trusted && constraint_cnt &&
+			    conf->constraint_median == 0)
 				continue;
 
 			if (p->next > 0 && p->next <= getmonotime()) {
@@ -265,7 +267,10 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 					log_info("peer %s now invalid",
 					    log_sockaddr(
 					    (struct sockaddr *)&p->addr->ss));
-				client_nextaddr(p);
+				if (client_nextaddr(p) == 1) {
+					peer_addr_head_clear(p);
+					client_nextaddr(p);
+				}
 				set_next(p, timeout);
 			}
 			if (p->senderrors > MAX_SEND_ERRORS) {
@@ -274,7 +279,10 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 				    (struct sockaddr *)&p->addr->ss),
 				    INTERVAL_QUERY_PATHETIC);
 				p->senderrors = 0;
-				client_nextaddr(p);
+				if (client_nextaddr(p) == 1) {
+					peer_addr_head_clear(p);
+					client_nextaddr(p);
+				}
 				set_next(p, INTERVAL_QUERY_PATHETIC);
 			}
 			if (p->next > 0 && p->next < nextaction)
@@ -292,7 +300,9 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		}
 		idx_clients = i;
 
-		if (!TAILQ_EMPTY(&conf->ntp_conf_sensors)) {
+		if (!TAILQ_EMPTY(&conf->ntp_conf_sensors) &&
+		    (conf->trusted_sensors || constraint_cnt == 0 ||
+		    conf->constraint_median != 0)) {
 			if (last_sensor_scan == 0 ||
 			    last_sensor_scan + SENSOR_SCAN_INTERVAL <= getmonotime()) {
 				sensors_cnt = sensor_scan();
@@ -304,7 +314,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 			sensors_cnt = 0;
 			TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
 				if (conf->settime && s->offsets[0].offset)
-					priv_settime(s->offsets[0].offset);
+					priv_settime(s->offsets[0].offset, NULL);
 				sensors_cnt++;
 				if (s->next > 0 && s->next < nextaction)
 					nextaction = s->next;
@@ -314,7 +324,12 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		if (conf->settime &&
 		    ((trial_cnt > 0 && sent_cnt == 0) ||
 		    (peer_cnt == 0 && sensors_cnt == 0)))
-			priv_settime(0);	/* no good peers, don't wait */
+			priv_settime(0, "no valid peers configured");
+
+		TAILQ_FOREACH(cstr, &conf->constraints, entry) {
+			if (constraint_query(cstr) == -1)
+				continue;
+		}
 
 		if (ibuf_main->w.queued > 0)
 			pfd[PFD_PIPE_MAIN].events |= POLLOUT;
@@ -330,20 +345,12 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		}
 		ctls = i;
 
-		TAILQ_FOREACH(cstr, &conf->constraints, entry) {
-			if (constraint_query(cstr) == -1)
-				continue;
-		}
-
 		now = getmonotime();
-		if (constraint_cnt)
-			nextaction = now + 1;
-
 		timeout = nextaction - now;
 		if (timeout < 0)
 			timeout = 0;
 
-		if ((nfds = poll(pfd, i, timeout * 1000)) == -1)
+		if ((nfds = poll(pfd, i, timeout ? timeout * 1000 : 1)) == -1)
 			if (errno != EINTR) {
 				log_warn("poll error");
 				ntp_quit = 1;
@@ -359,7 +366,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		if (nfds > 0 && pfd[PFD_PIPE_MAIN].revents & (POLLIN|POLLERR)) {
 			nfds--;
 			if (ntp_dispatch_imsg() == -1) {
-				log_warn("pipe write error (from main)");
+				log_debug("pipe read error (from main)");
 				ntp_quit = 1;
 			}
 		}
@@ -374,7 +381,7 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		if (nfds > 0 && pfd[PFD_PIPE_DNS].revents & (POLLIN|POLLERR)) {
 			nfds--;
 			if (ntp_dispatch_imsg_dns() == -1) {
-				log_warn("pipe write error (from dns engine)");
+				log_warn("pipe read error (from dns engine)");
 				ntp_quit = 1;
 			}
 		}
@@ -395,11 +402,29 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 
 		for (; nfds > 0 && j < idx_clients; j++) {
 			if (pfd[j].revents & (POLLIN|POLLERR)) {
+				struct ntp_peer *pp = idx2peer[j - idx_peers];
+
 				nfds--;
-				if (client_dispatch(idx2peer[j - idx_peers],
-				    conf->settime) == -1) {
-					log_warn("pipe write error (settime)");
-					ntp_quit = 1;
+				switch (client_dispatch(pp, conf->settime,
+				    conf->automatic)) {
+				case -1:
+					log_debug("no reply from %s "
+					    "received", log_sockaddr(
+					    (struct sockaddr *) &pp->addr->ss));
+					if (pp->trustlevel >=
+					    TRUSTLEVEL_BADPEER &&
+					    (pp->trustlevel /= 2) <
+					    TRUSTLEVEL_BADPEER)
+						log_info("peer %s now invalid",
+						    log_sockaddr(
+						    (struct sockaddr *)
+						    &pp->addr->ss));
+					break;
+				case 0: /* invalid replies are ignored */
+					break;
+				case 1:
+					last_action = now;
+					break;
 				}
 			}
 		}
@@ -411,8 +436,24 @@ ntp_main(struct ntpd_conf *nconf, struct passwd *pw, int argc, char **argv)
 		for (s = TAILQ_FIRST(&conf->ntp_sensors); s != NULL;
 		    s = next_s) {
 			next_s = TAILQ_NEXT(s, entry);
-			if (s->next <= getmonotime())
+			if (s->next <= now) {
+				last_action = now;
 				sensor_query(s);
+			}
+		}
+
+		/*
+		 * Compute maximum of scale_interval(INTERVAL_QUERY_NORMAL),
+		 * if we did not process a time message for three times that
+		 * interval, stop advertising we're synced.
+		 */
+		interval = INTERVAL_QUERY_NORMAL * conf->scale;
+		interval += SCALE_INTERVAL(interval) - 1;
+		if (conf->status.synced && last_action + 3 * interval < now) {
+			log_info("clock is now unsynced due to lack of replies");
+			conf->status.synced = 0;
+			conf->scale = 1;
+			priv_dns(IMSG_UNSYNCED, NULL, 0);
 		}
 	}
 
@@ -449,9 +490,12 @@ ntp_dispatch_imsg(void)
 			if (n == 1 && !conf->status.synced) {
 				log_info("clock is now synced");
 				conf->status.synced = 1;
+				priv_dns(IMSG_SYNCED, NULL, 0);
+				constraint_reset();
 			} else if (n == 0 && conf->status.synced) {
 				log_info("clock is now unsynced");
 				conf->status.synced = 0;
+				priv_dns(IMSG_UNSYNCED, NULL, 0);
 			}
 			break;
 		case IMSG_CONSTRAINT_RESULT:
@@ -471,13 +515,37 @@ ntp_dispatch_imsg(void)
 }
 
 int
+inpool(struct sockaddr_storage *a,
+    struct sockaddr_storage old[MAX_SERVERS_DNS], size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n; i++) {
+		if (a->ss_family != old[i].ss_family)
+			continue;
+		if (a->ss_family == AF_INET) {
+			if (((struct sockaddr_in *)a)->sin_addr.s_addr ==
+			    ((struct sockaddr_in *)&old[i])->sin_addr.s_addr)
+				return 1;
+		} else if (memcmp(&((struct sockaddr_in6 *)a)->sin6_addr,
+		    &((struct sockaddr_in6 *)&old[i])->sin6_addr,
+		    sizeof(struct sockaddr_in6)) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
 ntp_dispatch_imsg_dns(void)
 {
 	struct imsg		 imsg;
-	struct ntp_peer		*peer, *npeer;
+	struct sockaddr_storage	 existing[MAX_SERVERS_DNS];
+	struct ntp_peer		*peer, *npeer, *tmp;
 	u_int16_t		 dlen;
 	u_char			*p;
 	struct ntp_addr		*h;
+	size_t			 addrcount, peercount = 0;
 	int			 n;
 
 	if (((n = imsg_read(ibuf_dns)) == -1 && errno != EAGAIN) || n == 0)
@@ -504,21 +572,60 @@ ntp_dispatch_imsg_dns(void)
 				break;
 			}
 
+			if (peer->addr_head.pool) {
+				n = 0;
+				peercount = 0;
+
+				TAILQ_FOREACH_SAFE(npeer, &conf->ntp_peers,
+				    entry, tmp) {
+					if (npeer->addr_head.pool !=
+					    peer->addr_head.pool)
+						continue;
+					peercount++;
+					if (npeer->id == peer->id)
+						continue;
+					if (npeer->addr != NULL)
+						existing[n++] = npeer->addr->ss;
+				}
+			}
+
 			dlen = imsg.hdr.len - IMSG_HEADER_SIZE;
 			if (dlen == 0) {	/* no data -> temp error */
+				log_warnx("DNS lookup tempfail");
 				peer->state = STATE_DNS_TEMPFAIL;
+				if (conf->tmpfail++ == TRIES_AUTO_DNSFAIL)
+					priv_settime(0, "of dns failures");
 				break;
 			}
 
 			p = (u_char *)imsg.data;
-			while (dlen >= sizeof(struct sockaddr_storage)) {
+			addrcount = dlen / (sizeof(struct sockaddr_storage) +
+			    sizeof(int));
+
+			while (dlen >= sizeof(struct sockaddr_storage) +
+			    sizeof(int)) {
 				if ((h = calloc(1, sizeof(struct ntp_addr))) ==
 				    NULL)
 					fatal(NULL);
 				memcpy(&h->ss, p, sizeof(h->ss));
 				p += sizeof(h->ss);
 				dlen -= sizeof(h->ss);
+				memcpy(&h->notauth, p, sizeof(int));
+				p += sizeof(int);
+				dlen -= sizeof(int);
 				if (peer->addr_head.pool) {
+					if (peercount > addrcount) {
+						free(h);
+						continue;
+					}
+					if (inpool(&h->ss, existing,
+					    n)) {
+						free(h);
+						continue;
+					}
+					log_debug("Adding address %s to %s",
+					    log_sockaddr((struct sockaddr *)
+					    &h->ss), peer->addr_head.name);
 					npeer = new_peer();
 					npeer->weight = peer->weight;
 					npeer->query_addr4 = peer->query_addr4;
@@ -528,10 +635,12 @@ ntp_dispatch_imsg_dns(void)
 					npeer->addr_head.a = h;
 					npeer->addr_head.name =
 					    peer->addr_head.name;
-					npeer->addr_head.pool = 1;
+					npeer->addr_head.pool =
+					    peer->addr_head.pool;
 					client_peer_init(npeer);
 					npeer->state = STATE_DNS_DONE;
 					peer_add(npeer);
+					peercount++;
 				} else {
 					h->next = peer->addr;
 					peer->addr = h;
@@ -549,6 +658,14 @@ ntp_dispatch_imsg_dns(void)
 		case IMSG_CONSTRAINT_DNS:
 			constraint_msg_dns(imsg.hdr.peerid,
 			    imsg.data, imsg.hdr.len - IMSG_HEADER_SIZE);
+			break;
+		case IMSG_PROBE_ROOT:
+			dlen = imsg.hdr.len - IMSG_HEADER_SIZE;
+			if (dlen != sizeof(int))
+				fatalx("IMSG_PROBE_ROOT");
+			memcpy(&n, imsg.data, sizeof(int));
+			if (n < 0)
+				priv_settime(0, "dns probe failed");
 			break;
 		default:
 			break;
@@ -571,6 +688,14 @@ peer_remove(struct ntp_peer *p)
 	TAILQ_REMOVE(&conf->ntp_peers, p, entry);
 	free(p);
 	peer_cnt--;
+}
+
+void
+peer_addr_head_clear(struct ntp_peer *p)
+{
+	host_dns_free(p->addr_head.a);
+	p->addr_head.a = NULL;
+	p->addr = NULL;
 }
 
 static void
@@ -722,8 +847,10 @@ offset_compare(const void *aa, const void *bb)
 }
 
 void
-priv_settime(double offset)
+priv_settime(double offset, char *msg)
 {
+	if (offset == 0)
+		log_info("cancel settime because %s", msg);
 	imsg_compose(ibuf_main, IMSG_SETTIME, 0, 0, -1,
 	    &offset, sizeof(offset));
 	conf->settime = 0;
@@ -732,9 +859,10 @@ priv_settime(double offset)
 void
 priv_dns(int cmd, char *name, u_int32_t peerid)
 {
-	u_int16_t	dlen;
+	u_int16_t	dlen = 0;
 
-	dlen = strlen(name) + 1;
+	if (name != NULL)
+		dlen = strlen(name) + 1;
 	imsg_compose(ibuf_dns, cmd, peerid, 0, -1, name, dlen);
 }
 
@@ -760,7 +888,7 @@ scale_interval(time_t requested)
 	time_t interval, r;
 
 	interval = requested * conf->scale;
-	r = arc4random_uniform(MAXIMUM(5, interval / 10));
+	r = arc4random_uniform(SCALE_INTERVAL(interval));
 	return (interval + r);
 }
 

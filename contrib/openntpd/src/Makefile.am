@@ -30,7 +30,9 @@ ntpd_CFLAGS += -DLOCALSTATEDIR=\"$(localstatedir)\"
 
 ntpd_LDADD = $(PLATFORM_LDADD) $(PROG_LDADD) -lm
 ntpd_LDADD += $(top_builddir)/compat/libcompat.la
+if !HAVE_EXPLICIT_BZERO
 ntpd_LDADD += $(top_builddir)/compat/libcompatnoopt.la
+endif
 
 ntpd_SOURCES = client.c
 ntpd_SOURCES += config.c
@@ -41,6 +43,7 @@ ntpd_SOURCES += constraint-disabled.c
 endif
 ntpd_SOURCES += control.c
 ntpd_SOURCES += log.c
+ntpd_SOURCES += log.h
 ntpd_SOURCES += ntp.c
 ntpd_SOURCES += ntp.h
 ntpd_SOURCES += ntp_dns.c
@@ -67,24 +70,11 @@ install-exec-hook:
 	@if [ ! -d "$(DESTDIR)$(localstatedir)/db" ]; then \
 		$(INSTALL) -m 755 -d "$(DESTDIR)$(localstatedir)/db"; \
 	fi
-	@if [ ! -d "$(PRIVSEP_PATH)" ]; then \
-		echo; \
-		echo " Please created a privilege separation directory for ntpd." ; \
-		echo " For OS X, see INSTALL for instructions." ; \
-		echo " On Linux / BSD systems, this will probably work:"; \
-		echo ; \
-		echo "   mkdir -p \"$(PRIVSEP_PATH)\"" ; \
-		echo "   chown 0 \"$(PRIVSEP_PATH)\"" ; \
-		echo "   chgrp 0 \"$(PRIVSEP_PATH)\"" ; \
-		echo "   chmod 0755 \"$(PRIVSEP_PATH)\"" ; \
-	fi
 	@if egrep "^$(PRIVSEP_USER):" /etc/group >/dev/null; then \
 		: ; \
 	else \
 		echo; \
 		echo " Please create a dedicated group for ntpd." ; \
-		echo " For OS X, see INSTALL for instructions." ; \
-		echo " On Linux / BSD systems, this will probably work:"; \
 		echo ; \
 		echo "   groupadd $(PRIVSEP_USER)" ; \
 	fi
@@ -92,22 +82,12 @@ install-exec-hook:
 		: ; \
 	else \
 		echo; \
-		echo " Please create a dedicated user for ntpd and ensure it" ; \
-		echo " cannot be used to log in." ; \
-		echo " For OS X, see INSTALL for instructions." ; \
-		echo " On Linux / BSD systems, this will probably work:" ; \
+		echo " Please create a dedicated user for ntpd and ensure it cannot be used to log in." ; \
 		echo ; \
-		echo "   useradd -g $(PRIVSEP_USER) -s /sbin/nologin -d $(PRIVSEP_PATH) -c 'OpenNTP daemon' $(PRIVSEP_USER)" ; \
-	fi
-	@if [ -d $(PRIVSEP_PATH) ]; then \
-		if [ `ls -A $(PRIVSEP_PATH)|wc -l` != "0" ]; then \
-		echo; \
-		echo " WARNING: the privilege separation path is specified as $(PRIVSEP_PATH), " ; \
-		echo "          but this directory contains files!" ; \
-		echo ; \
-		echo " Please ensure that $(PRIVSEP_PATH) is empty. If you installed a previous " ; \
-		echo " OpenNTPD version and created a user with a home directory at /var/empty/ntpd, " ; \
-		echo " please adjust that user to use /var/empty instead and delete /var/empty/ntpd." ; \
-		fi; \
+		echo "   useradd -g $(PRIVSEP_USER) -s /sbin/nologin -d /var/run/openntpd -c 'OpenNTP daemon' $(PRIVSEP_USER)" ; \
+		echo "   mkdir -p /var/run/openntpd" ; \
+		echo "   chown 0 /var/run/openntpd" ; \
+		echo "   chgrp 0 /var/run/openntpd" ; \
+		echo "   chmod 0755 /var/run/openntpd" ; \
 	fi
 	@echo

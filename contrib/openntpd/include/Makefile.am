@@ -1,4 +1,5 @@
 noinst_HEADERS =
+noinst_HEADERS += arpa/nameser.h
 noinst_HEADERS += machine/endian.h
 noinst_HEADERS += sys/queue.h
 noinst_HEADERS += sys/socket.h
@@ -13,7 +14,6 @@ noinst_HEADERS += md5.h
 noinst_HEADERS += sha2.h
 noinst_HEADERS += signal.h
 noinst_HEADERS += sha2_openbsd.h
-noinst_HEADERS += Makefile.in
 noinst_HEADERS += paths.h
 noinst_HEADERS += poll.h
 noinst_HEADERS += stdio.h

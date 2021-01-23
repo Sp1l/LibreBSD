@@ -1,4 +1,4 @@
-/*	$OpenBSD: sha2.c,v 1.26 2017/05/27 15:32:51 naddy Exp $	*/
+/*	$OpenBSD: sha2.c,v 1.28 2019/07/23 12:35:22 dtucker Exp $	*/
 
 /*
  * FILE:	sha2.c
@@ -65,7 +65,7 @@
  * Please make sure that your system defines BYTE_ORDER.  If your
  * architecture is little-endian, make sure it also defines
  * LITTLE_ENDIAN and that the two (BYTE_ORDER and LITTLE_ENDIAN) are
- * equivilent.
+ * equivalent.
  *
  * If your system does not define the above, then you can do so by
  * hand like this:
@@ -503,7 +503,7 @@ SHA256Transform(u_int32_t state[8], const u_int8_t data[SHA256_BLOCK_LENGTH])
 void
 SHA256Update(SHA2_CTX *context, const u_int8_t *data, size_t len)
 {
-	size_t	freespace, usedspace;
+	u_int64_t	freespace, usedspace;
 
 	/* Calling with no data is valid (we do nothing) */
 	if (len == 0)
@@ -524,7 +524,7 @@ SHA256Update(SHA2_CTX *context, const u_int8_t *data, size_t len)
 		} else {
 			/* The buffer is not yet full */
 			memcpy(&context->buffer[usedspace], data, len);
-			context->bitcount[0] += len << 3;
+			context->bitcount[0] += (u_int64_t)len << 3;
 			/* Clean up: */
 			usedspace = freespace = 0;
 			return;

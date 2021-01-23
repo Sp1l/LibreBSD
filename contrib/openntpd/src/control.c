@@ -1,4 +1,4 @@
-/*	$OpenBSD: control.c,v 1.12 2017/01/09 14:04:31 krw Exp $ */
+/*	$OpenBSD: control.c,v 1.18 2020/02/12 19:14:56 otto Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -35,6 +35,32 @@
 #define	CONTROL_BACKLOG	5
 
 #define square(x) ((x) * (x))
+
+int
+control_check(char *path)
+{
+	struct sockaddr_un	 saddr;
+	int			 fd;
+
+	bzero(&saddr, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strlcpy(saddr.sun_path, path, sizeof(saddr.sun_path));
+
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		log_debug("control_check: socket check");
+		return (-1);
+	}
+
+	if (connect(fd, (struct sockaddr *)&saddr, sizeof(saddr)) == 0) {
+		log_debug("control_check: socket in use");
+		close(fd);
+		return (-1);
+	}
+
+	close(fd);
+
+	return (0);
+}
 
 int
 control_init(char *path)
@@ -97,13 +123,6 @@ void
 control_shutdown(int fd)
 {
 	close(fd);
-}
-
-void
-control_cleanup(const char *path)
-{
-	if (path)
-		unlink(path);
 }
 
 int
@@ -310,6 +329,7 @@ build_show_status(struct ctl_show_status *cs)
 	cs->synced = conf->status.synced;
 	cs->stratum = conf->status.stratum;
 	cs->clock_offset = getoffset() * 1000.0;
+	cs->constraints = !TAILQ_EMPTY(&conf->constraints);
 	cs->constraint_median = conf->constraint_median;
 	cs->constraint_last = conf->constraint_last;
 	cs->constraint_errors = conf->constraint_errors;
@@ -320,21 +340,25 @@ build_show_peer(struct ctl_show_peer *cp, struct ntp_peer *p)
 {
 	const char	*a = "not resolved";
 	const char	*pool = "", *addr_head_name = "";
+	const char	*auth = "";
 	u_int8_t	 shift, best, validdelaycnt, jittercnt;
 	time_t		 now;
 
 	now = getmonotime();
 
-	if (p->addr)
+	if (p->addr) {
 		a = log_sockaddr((struct sockaddr *)&p->addr->ss);
+		if (p->addr->notauth)
+			auth = " (non-dnssec lookup)";
+	}
 	if (p->addr_head.pool)
 		pool = "from pool ";
 
-	if (0 != strcmp(a, p->addr_head.name))
+	if (0 != strcmp(a, p->addr_head.name) || p->addr_head.pool)
 		addr_head_name = p->addr_head.name;
 
 	snprintf(cp->peer_desc, sizeof(cp->peer_desc),
-	    "%s %s%s", a, pool, addr_head_name);
+	    "%s %s%s%s", a, pool, addr_head_name, auth);
 
 	validdelaycnt = best = 0;
 	cp->offset = cp->delay = 0.0;

@@ -1,4 +1,4 @@
-/*	$OpenBSD: ntp_dns.c,v 1.20 2017/04/17 16:03:15 otto Exp $ */
+/*	$OpenBSD: ntp_dns.c,v 1.26 2020/04/12 14:20:56 otto Exp $ */
 
 /*
  * Copyright (c) 2003-2008 Henning Brauer <henning@openbsd.org>
@@ -19,6 +19,11 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
+
+#include <netinet/in.h>
 
 #include <err.h>
 #include <errno.h>
@@ -28,15 +33,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <resolv.h>
 #include <unistd.h>
 
 #include "ntpd.h"
 
 volatile sig_atomic_t	 quit_dns = 0;
-struct imsgbuf		*ibuf_dns;
+static struct imsgbuf	*ibuf_dns;
+extern int		 non_numeric;
 
 void	sighdlr_dns(int);
-int	dns_dispatch_imsg(void);
+int	dns_dispatch_imsg(struct ntpd_conf *);
+int	probe_root_ns(void);
+void	probe_root(void);
 
 void
 sighdlr_dns(int sig)
@@ -55,15 +64,14 @@ ntp_dns(struct ntpd_conf *nconf, struct passwd *pw)
 	struct pollfd		 pfd[1];
 	int			 nfds, nullfd;
 
+	res_init();
 	if (setpriority(PRIO_PROCESS, 0, 0) == -1)
 		log_warn("could not set priority");
 
-	/* in this case the parent didn't init logging and didn't daemonize */
-	if (nconf->settime && !nconf->debug) {
-		log_init(nconf->debug, LOG_DAEMON);
-		if (setsid() == -1)
-			fatal("setsid");
-	}
+	log_init(nconf->debug ? LOG_TO_STDERR : LOG_TO_SYSLOG, nconf->verbose,
+	    LOG_DAEMON);
+	if (!nconf->debug && setsid() == -1)
+		fatal("setsid");
 	log_procinit("dns");
 
 	if ((nullfd = open("/dev/null", O_RDWR, 0)) == -1)
@@ -94,6 +102,11 @@ ntp_dns(struct ntpd_conf *nconf, struct passwd *pw)
 	if (pledge("stdio dns", NULL) == -1)
 		err(1, "pledge");
 
+	if (non_numeric)
+		probe_root();
+	else
+		log_debug("all addresses numeric, no dns probe");
+
 	while (quit_dns == 0) {
 		pfd[0].fd = ibuf_dns->fd;
 		pfd[0].events = POLLIN;
@@ -115,7 +128,7 @@ ntp_dns(struct ntpd_conf *nconf, struct passwd *pw)
 
 		if (nfds > 0 && pfd[0].revents & POLLIN) {
 			nfds--;
-			if (dns_dispatch_imsg() == -1)
+			if (dns_dispatch_imsg(nconf) == -1)
 				quit_dns = 1;
 		}
 	}
@@ -126,7 +139,7 @@ ntp_dns(struct ntpd_conf *nconf, struct passwd *pw)
 }
 
 int
-dns_dispatch_imsg(void)
+dns_dispatch_imsg(struct ntpd_conf *nconf)
 {
 	struct imsg		 imsg;
 	int			 n, cnt;
@@ -160,19 +173,26 @@ dns_dispatch_imsg(void)
 			if (name[len] != '\0' ||
 			    strlen(name) != len)
 				fatalx("invalid %s received", str);
-			if ((cnt = host_dns(name, &hn)) == -1)
+			if ((cnt = host_dns(name, nconf->status.synced,
+			    &hn)) == -1)
 				break;
 			buf = imsg_create(ibuf_dns, imsg.hdr.type,
 			    imsg.hdr.peerid, 0,
-			    cnt * sizeof(struct sockaddr_storage));
+			    cnt * (sizeof(struct sockaddr_storage) + sizeof(int)));
 			if (cnt > 0) {
 				if (buf) {
-					for (h = hn; h != NULL; h = h->next)
+					for (h = hn; h != NULL; h = h->next) {
 						if (imsg_add(buf, &h->ss,
 						    sizeof(h->ss)) == -1) {
 							buf = NULL;
 							break;
 						}
+						if (imsg_add(buf, &h->notauth,
+						    sizeof(int)) == -1) {
+							buf = NULL;
+							break;
+						}
+					}
 				}
 				host_dns_free(hn);
 				hn = NULL;
@@ -180,10 +200,57 @@ dns_dispatch_imsg(void)
 			if (buf)
 				imsg_close(ibuf_dns, buf);
 			break;
+		case IMSG_SYNCED:
+			nconf->status.synced = 1;
+			break;
+		case IMSG_UNSYNCED:
+			nconf->status.synced = 0;
+			break;
 		default:
 			break;
 		}
 		imsg_free(&imsg);
 	}
 	return (0);
+}
+
+int
+probe_root_ns(void)
+{
+	int ret;
+	int old_retrans, old_retry, old_options;
+	unsigned char buf[4096];
+
+	old_retrans = _res.retrans;
+	old_retry = _res.retry;
+	old_options = _res.options;
+	_res.retrans = 1;
+	_res.retry = 1;
+#ifdef RES_USE_CD
+	_res.options |= RES_USE_CD;
+#endif
+
+	ret = res_query(".", C_IN, T_NS, buf, sizeof(buf));
+
+	_res.retrans = old_retrans;
+	_res.retry = old_retry;
+	_res.options = old_options;
+
+	return ret;
+}
+
+void
+probe_root(void)
+{
+	int		n;
+
+	n = probe_root_ns();
+	if (n < 0) {
+		/* give programs like unwind a second chance */
+		sleep(1);
+		n = probe_root_ns();
+	}
+	if (imsg_compose(ibuf_dns, IMSG_PROBE_ROOT, 0, 0, -1, &n,
+	    sizeof(int)) == -1)
+		fatalx("probe_root");
 }

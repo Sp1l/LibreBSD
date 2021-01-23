@@ -1,5 +1,9 @@
 # Makefile for ntpd.
 
+.include <src.opts.mk>
+
+.if ${MK_OPENNTPD} == "no"
+
 SUBDIR=	libopts libntp libntpevent libparse ntpd ntpdc ntpq ntpdate \
 	ntptime ntp-keygen sntp
 SUBDIR+=	doc
@@ -13,5 +17,11 @@ SUBDIR_DEPEND_ntp-keygen=	libntp libopts
 SUBDIR_DEPEND_sntp=	libntp libntpevent libopts
 
 SUBDIR_PARALLEL=
+
+.else
+
+SUBDIR=	openntpd
+
+.endif
 
 .include <bsd.subdir.mk>

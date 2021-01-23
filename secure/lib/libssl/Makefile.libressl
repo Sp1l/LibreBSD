@@ -1,0 +1,82 @@
+# $OpenBSD: Makefile,v 1.56 2019/02/09 15:30:52 jsing Exp $
+
+LIB=	ssl
+SHLIB_MAJOR=	48
+
+NO_LINT=
+
+.if exists(Makefile.man)
+.include "Makefile.man.libressl"
+.endif
+.include "../libcrypto/Makefile.inc.libressl"
+
+### This is copied straight from the original Makefile
+### src/lib/libssl/ssl/Makefile
+
+SRCS= \
+	bio_ssl.c \
+	bs_ber.c \
+	bs_cbb.c \
+	bs_cbs.c \
+	d1_both.c \
+	d1_clnt.c \
+	d1_lib.c \
+	d1_pkt.c \
+	d1_srtp.c \
+	d1_srvr.c \
+	pqueue.c \
+	s3_cbc.c \
+	s3_lib.c \
+	ssl_algs.c \
+	ssl_asn1.c \
+	ssl_both.c \
+	ssl_cert.c \
+	ssl_ciph.c \
+	ssl_ciphers.c \
+	ssl_clnt.c \
+	ssl_err.c \
+	ssl_init.c \
+	ssl_kex.c \
+	ssl_lib.c \
+	ssl_methods.c \
+	ssl_packet.c \
+	ssl_pkt.c \
+	ssl_rsa.c \
+	ssl_sess.c \
+	ssl_sigalgs.c \
+	ssl_srvr.c \
+	ssl_stat.c \
+	ssl_tlsext.c \
+	ssl_transcript.c \
+	ssl_txt.c \
+	ssl_versions.c \
+	t1_enc.c \
+	t1_lib.c \
+	tls12_record_layer.c \
+	tls13_buffer.c \
+	tls13_client.c \
+	tls13_error.c \
+	tls13_handshake.c \
+	tls13_handshake_msg.c \
+	tls13_key_schedule.c \
+	tls13_key_share.c \
+	tls13_legacy.c \
+	tls13_lib.c \
+	tls13_record.c \
+	tls13_record_layer.c \
+	tls13_server.c
+
+INCS=	dtls1.h srtp.h ssl.h ssl2.h ssl23.h ssl3.h tls1.h
+
+INCSDIR=${INCLUDEDIR}/openssl
+
+CFLAGS+= -Wall -Wundef
+CFLAGS+= -I${LSSL_SRC} 
+
+LIBADD=	crypto
+
+.include <bsd.lib.mk>
+
+.PATH:	${LSSL_SRC} \
+	${LIBRESSL_SRC}/include/openssl \
+	${LIBRESSL_SRC}/man

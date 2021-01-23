@@ -85,6 +85,9 @@
 
 /* Define to 1 if you have the `EVP_dss1' function. */
 /* #undef HAVE_EVP_DSS1 */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_DSS1 1
+#endif
 
 /* Define to 1 if you have the `EVP_MD_CTX_new' function. */
 #define HAVE_EVP_MD_CTX_NEW 1
@@ -148,6 +151,9 @@
 
 /* Define if we have LibreSSL */
 /* #undef HAVE_LIBRESSL */
+#ifdef WITH_LIBRESSL
+#define HAVE_LIBRESSL 1
+#endif
 
 /* Define to 1 if you have the `localtime_r' function. */
 #define HAVE_LOCALTIME_R 1
@@ -362,7 +368,9 @@
 #define USE_DANE 1
 
 /* Define this to enable DANE-TA usage type support. */
+#ifndef WITH_LIBRESSL
 #define USE_DANE_TA_USAGE 1
+#endif
 
 /* Define this to enable DANE verify support. */
 #define USE_DANE_VERIFY 1
@@ -381,6 +389,9 @@
 
 /* Define this to enable GOST support. */
 /* #undef USE_GOST */
+#ifdef WITH_LIBRESSL
+#define USE_GOST 1
+#endif
 
 /* Define this to enable SHA256 and SHA512 support. */
 #define USE_SHA2 1

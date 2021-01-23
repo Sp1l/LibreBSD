@@ -1,10 +1,16 @@
 # $FreeBSD$
 
+.include <src.opts.mk>
+
 # Vendor sources and generated files
 LDNSDIR= ${SRCTOP}/contrib/ldns
 UNBOUNDDIR= ${SRCTOP}/contrib/unbound
 
 .PATH: ${UNBOUNDDIR} ${UNBOUNDDIR}/daemon ${UNBOUNDDIR}/util ${UNBOUNDDIR}/util/shm_side ${UNBOUNDDIR}/doc
+
+.if ${MK_LIBRESSL} != "no"
+CFLAGS+= -DWITH_LIBRESSL=YES
+.endif
 
 PROG=	local-unbound
 SRCS=	acl_list.c cachedump.c daemon.c remote.c shm_main.c stats.c \

@@ -1387,12 +1387,12 @@ info(void *opt, int argc, char **argv)
     {
 	const RSA_METHOD *m = RSA_get_default_method();
 	if (m != NULL)
-	    printf("rsa: %s\n", RSA_meth_get0_name(m));
+	    printf("rsa: %s\n", m->name);
     }
     {
 	const DH_METHOD *m = DH_get_default_method();
 	if (m != NULL)
-	    printf("dh: %s\n", DH_meth_get0_name(m));
+	    printf("dh: %s\n", m->name);
     }
 #ifdef HAVE_OPENSSL
     {

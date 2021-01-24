@@ -323,7 +323,7 @@ INCS+=	aes.h asn1.h asn1t.h \
 	sm3.h sm4.h safestack.h stack.h ts.h txt_db.h \
 	ui.h ui_compat.h \
 	whrlpool.h \
-	x509.h x509_vfy.h x509v3.h
+	x509.h x509_verify.h x509_vfy.h x509v3.h
 
 INCSDIR=	${INCLUDEDIR}/openssl
 

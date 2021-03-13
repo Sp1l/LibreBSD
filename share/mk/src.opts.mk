@@ -213,11 +213,8 @@ __DEFAULT_NO_OPTIONS = \
     LOADER_VERIEXEC_PASS_MANIFEST \
     OFED_EXTRA \
     OPENLDAP \
-<<<<<<< HEAD
     OPENSSL_KTLS \
-=======
     OPENNTPD \
->>>>>>> 61d55b5f9ee7 (LibreBSD: Update FreeBSD build framework for LibreSSL)
     RPCBIND_WARMSTART_SUPPORT \
     SORT_THREADS \
     SVN \

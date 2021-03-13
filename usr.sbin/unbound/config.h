@@ -211,7 +211,6 @@
 /* Define to 1 if you have the `ERR_load_crypto_strings' function. */
 #define HAVE_ERR_LOAD_CRYPTO_STRINGS 1
 #endif
->>>>>>> 92d30bdfb9ba (contrib/unbound: Fix build with LibreSSL)
 
 /* Define to 1 if you have the `ERR_free_strings' function. */
 /* #undef HAVE_ERR_FREE_STRINGS */

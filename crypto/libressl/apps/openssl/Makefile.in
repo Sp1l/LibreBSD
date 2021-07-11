@@ -89,7 +89,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = openssl$(EXEEXT)
+@ENABLE_LIBTLS_ONLY_FALSE@bin_PROGRAMS = openssl$(EXEEXT)
+@ENABLE_LIBTLS_ONLY_TRUE@noinst_PROGRAMS = openssl$(EXEEXT)
 @BUILD_CERTHASH_TRUE@am__append_1 = certhash.c
 @BUILD_CERTHASH_FALSE@am__append_2 = certhash_win.c
 @HOST_WIN_TRUE@am__append_3 = apps_win.c
@@ -116,7 +117,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
-PROGRAMS = $(bin_PROGRAMS)
+PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am__openssl_SOURCES_DIST = apps.c asn1pars.c ca.c ciphers.c crl.c \
 	crl2p7.c cms.c dgst.c dh.c dhparam.c dsa.c dsaparam.c ec.c \
 	ecparam.c enc.c errstr.c gendh.c gendsa.c genpkey.c genrsa.c \
@@ -407,7 +408,7 @@ AM_CFLAGS =
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/compat \
 	-DLIBRESSL_INTERNAL -D__BEGIN_HIDDEN_DECLS= \
 	-D__END_HIDDEN_DECLS=
-dist_man_MANS = openssl.1
+@ENABLE_LIBTLS_ONLY_FALSE@dist_man_MANS = openssl.1
 openssl_LDADD = $(abs_top_builddir)/ssl/libssl.la \
 	$(abs_top_builddir)/crypto/libcrypto.la $(PLATFORM_LDADD) \
 	$(PROG_LDADD)
@@ -423,7 +424,7 @@ openssl_SOURCES = apps.c asn1pars.c ca.c ciphers.c crl.c crl2p7.c \
 	$(am__append_7)
 noinst_HEADERS = apps.h progs.h s_apps.h testdsa.h testrsa.h \
 	timeouts.h
-EXTRA_DIST = cert.pem openssl.cnf x509v3.cnf CMakeLists.txt
+EXTRA_DIST = CMakeLists.txt
 all: all-am
 
 .SUFFIXES:
@@ -501,6 +502,15 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
+	echo " rm -f" $$list; \
+	rm -f $$list || exit $$?; \
+	test -n "$(EXEEXT)" || exit 0; \
+	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
+	echo " rm -f" $$list; \
+	rm -f $$list
+
+clean-noinstPROGRAMS:
+	@list='$(noinst_PROGRAMS)'; test -n "$$list" || exit 0; \
 	echo " rm -f" $$list; \
 	rm -f $$list || exit $$?; \
 	test -n "$(EXEEXT)" || exit 0; \
@@ -792,7 +802,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/apps.Po
@@ -873,8 +884,7 @@ install-dvi: install-dvi-am
 install-dvi-am:
 
 install-exec-am: install-binPROGRAMS
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
+
 install-html: install-html-am
 
 install-html-am:
@@ -967,57 +977,30 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
+uninstall-am: uninstall-binPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: install-am install-exec-am install-strip
+.MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles check check-am clean \
-	clean-binPROGRAMS clean-generic clean-libtool cscopelist-am \
-	ctags ctags-am distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-exec-hook install-html \
-	install-html-am install-info install-info-am install-man \
-	install-man1 install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-local \
+	clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstPROGRAMS cscopelist-am ctags ctags-am distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-man1 install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
 	uninstall-man uninstall-man1
 
 .PRECIOUS: Makefile
 
-
-install-exec-hook:
-	@if [ "@OPENSSLDIR@x" != "x" ]; then \
-		OPENSSLDIR="$(DESTDIR)@OPENSSLDIR@"; \
-	else \
-		OPENSSLDIR="$(DESTDIR)$(sysconfdir)/ssl"; \
-	fi; \
-	mkdir -p "$$OPENSSLDIR/certs"; \
-	for i in cert.pem openssl.cnf x509v3.cnf; do \
-		if [ ! -f "$$OPENSSLDIR/$i" ]; then \
-			$(INSTALL) -m 644 "$(srcdir)/$$i" "$$OPENSSLDIR/$$i"; \
-		else \
-			echo " $$OPENSSLDIR/$$i already exists, install will not overwrite"; \
-		fi \
-	done
-
-uninstall-local:
-	@if [ "@OPENSSLDIR@x" != "x" ]; then \
-		OPENSSLDIR="$(DESTDIR)@OPENSSLDIR@"; \
-	else \
-		OPENSSLDIR="$(DESTDIR)$(sysconfdir)/ssl"; \
-	fi; \
-	for i in cert.pem openssl.cnf x509v3.cnf; do \
-		if cmp -s "$$OPENSSLDIR/$$i" "$(srcdir)/$$i"; then \
-			rm -f "$$OPENSSLDIR/$$i"; \
-		fi \
-	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

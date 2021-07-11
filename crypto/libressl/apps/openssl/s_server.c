@@ -1,4 +1,4 @@
-/* $OpenBSD: s_server.c,v 1.43 2020/07/27 13:46:48 inoguchi Exp $ */
+/* $OpenBSD: s_server.c,v 1.47 2021/03/17 18:11:01 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -239,7 +239,7 @@ static struct {
 	int bugs;
 	char *CAfile;
 	char *CApath;
-#ifndef OPENSSL_NO_DTLS1
+#ifndef OPENSSL_NO_DTLS
 	int cert_chain;
 #endif
 	char *cert_file;
@@ -315,7 +315,7 @@ s_server_opt_keymatexportlen(char *arg)
 	return (0);
 }
 
-#ifndef OPENSSL_NO_DTLS1
+#ifndef OPENSSL_NO_DTLS
 static int
 s_server_opt_mtu(char *arg)
 {
@@ -328,9 +328,11 @@ s_server_opt_mtu(char *arg)
 	}
 	return (0);
 }
+#endif
 
+#ifndef OPENSSL_NO_DTLS
 static int
-s_server_protocol_version_dtls1(void)
+s_server_opt_protocol_version_dtls(void)
 {
 	s_server_config.meth = DTLS_server_method();
 	s_server_config.socket_type = SOCK_DGRAM;
@@ -338,8 +340,32 @@ s_server_protocol_version_dtls1(void)
 }
 #endif
 
+#ifndef OPENSSL_NO_DTLS1
 static int
-s_server_protocol_version_tls1(void)
+s_server_opt_protocol_version_dtls1(void)
+{
+	s_server_config.meth = DTLS_server_method();
+	s_server_config.min_version = DTLS1_VERSION;
+	s_server_config.max_version = DTLS1_VERSION;
+	s_server_config.socket_type = SOCK_DGRAM;
+	return (0);
+}
+#endif
+
+#ifndef OPENSSL_NO_DTLS1_2
+static int
+s_server_opt_protocol_version_dtls1_2(void)
+{
+	s_server_config.meth = DTLS_server_method();
+	s_server_config.min_version = DTLS1_2_VERSION;
+	s_server_config.max_version = DTLS1_2_VERSION;
+	s_server_config.socket_type = SOCK_DGRAM;
+	return (0);
+}
+#endif
+
+static int
+s_server_opt_protocol_version_tls1(void)
 {
 	s_server_config.min_version = TLS1_VERSION;
 	s_server_config.max_version = TLS1_VERSION;
@@ -347,7 +373,7 @@ s_server_protocol_version_tls1(void)
 }
 
 static int
-s_server_protocol_version_tls1_1(void)
+s_server_opt_protocol_version_tls1_1(void)
 {
 	s_server_config.min_version = TLS1_1_VERSION;
 	s_server_config.max_version = TLS1_1_VERSION;
@@ -355,7 +381,7 @@ s_server_protocol_version_tls1_1(void)
 }
 
 static int
-s_server_protocol_version_tls1_2(void)
+s_server_opt_protocol_version_tls1_2(void)
 {
 	s_server_config.min_version = TLS1_2_VERSION;
 	s_server_config.max_version = TLS1_2_VERSION;
@@ -363,7 +389,7 @@ s_server_protocol_version_tls1_2(void)
 }
 
 static int
-s_server_protocol_version_tls1_3(void)
+s_server_opt_protocol_version_tls1_3(void)
 {
 	s_server_config.min_version = TLS1_3_VERSION;
 	s_server_config.max_version = TLS1_3_VERSION;
@@ -473,6 +499,14 @@ s_server_opt_verify_param(int argc, char **argv, int *argsused)
 
 static const struct option s_server_options[] = {
 	{
+		.name = "4",
+		.type = OPTION_DISCARD,
+	},
+	{
+		.name = "6",
+		.type = OPTION_DISCARD,
+	},
+	{
 		.name = "accept",
 		.argname = "port",
 		.desc = "Port to accept on (default is 4433)",
@@ -530,7 +564,7 @@ static const struct option s_server_options[] = {
 		.type = OPTION_ARG_FORMAT,
 		.opt.value = &s_server_config.cert_format,
 	},
-#ifndef OPENSSL_NO_DTLS1
+#ifndef OPENSSL_NO_DTLS
 	{
 		.name = "chain",
 		.type = OPTION_FLAG,
@@ -605,12 +639,28 @@ static const struct option s_server_options[] = {
 		.type = OPTION_ARG,
 		.opt.arg = &s_server_config.dpassarg,
 	},
+#ifndef OPENSSL_NO_DTLS
+	{
+		.name = "dtls",
+		.desc = "Use any version of DTLS",
+		.type = OPTION_FUNC,
+		.opt.func = s_server_opt_protocol_version_dtls,
+	},
+#endif
 #ifndef OPENSSL_NO_DTLS1
 	{
 		.name = "dtls1",
-		.desc = "Just talk DTLSv1",
+		.desc = "Just use DTLSv1",
 		.type = OPTION_FUNC,
-		.opt.func = s_server_protocol_version_dtls1,
+		.opt.func = s_server_opt_protocol_version_dtls1,
+	},
+#endif
+#ifndef OPENSSL_NO_DTLS1_2
+	{
+		.name = "dtls1_2",
+		.desc = "Just use DTLSv1.2",
+		.type = OPTION_FUNC,
+		.opt.func = s_server_opt_protocol_version_dtls1_2,
 	},
 #endif
 	{
@@ -681,7 +731,7 @@ static const struct option s_server_options[] = {
 		.type = OPTION_FLAG,
 		.opt.flag = &s_server_config.msg,
 	},
-#ifndef OPENSSL_NO_DTLS1
+#ifndef OPENSSL_NO_DTLS
 	{
 		.name = "mtu",
 		.argname = "mtu",
@@ -868,7 +918,7 @@ static const struct option s_server_options[] = {
 		.type = OPTION_FUNC,
 		.opt.func = s_server_opt_status_verbose,
 	},
-#ifndef OPENSSL_NO_DTLS1
+#ifndef OPENSSL_NO_DTLS
 	{
 		.name = "timeout",
 		.desc = "Enable timeouts",
@@ -880,25 +930,25 @@ static const struct option s_server_options[] = {
 		.name = "tls1",
 		.desc = "Just talk TLSv1",
 		.type = OPTION_FUNC,
-		.opt.func = s_server_protocol_version_tls1,
+		.opt.func = s_server_opt_protocol_version_tls1,
 	},
 	{
 		.name = "tls1_1",
 		.desc = "Just talk TLSv1.1",
 		.type = OPTION_FUNC,
-		.opt.func = s_server_protocol_version_tls1_1,
+		.opt.func = s_server_opt_protocol_version_tls1_1,
 	},
 	{
 		.name = "tls1_2",
 		.desc = "Just talk TLSv1.2",
 		.type = OPTION_FUNC,
-		.opt.func = s_server_protocol_version_tls1_2,
+		.opt.func = s_server_opt_protocol_version_tls1_2,
 	},
 	{
 		.name = "tls1_3",
 		.desc = "Just talk TLSv1.3",
 		.type = OPTION_FUNC,
-		.opt.func = s_server_protocol_version_tls1_3,
+		.opt.func = s_server_opt_protocol_version_tls1_3,
 	},
 	{
 		.name = "tlsextdebug",
@@ -992,7 +1042,7 @@ sv_usage(void)
 	    "    [-context id] [-crl_check] [-crl_check_all] [-crlf]\n"
 	    "    [-dcert file] [-dcertform der | pem] [-debug]\n"
 	    "    [-dhparam file] [-dkey file] [-dkeyform der | pem]\n"
-	    "    [-dpass arg] [-dtls1] [-groups list] [-HTTP]\n"
+	    "    [-dpass arg] [-dtls] [-dtls1] [-dtls1_2] [-groups list] [-HTTP]\n"
 	    "    [-id_prefix arg] [-key keyfile] [-key2 keyfile]\n"
 	    "    [-keyform der | pem] [-keymatexport label]\n"
 	    "    [-keymatexportlen len] [-msg] [-mtu mtu]\n"
@@ -1189,12 +1239,6 @@ s_server_main(int argc, char *argv[])
 	if (s_server_config.bugs)
 		SSL_CTX_set_options(ctx, SSL_OP_ALL);
 	SSL_CTX_set_options(ctx, s_server_config.off);
-	/*
-	 * DTLS: partial reads end up discarding unread UDP bytes :-( Setting
-	 * read ahead solves this problem.
-	 */
-	if (s_server_config.socket_type == SOCK_DGRAM)
-		SSL_CTX_set_read_ahead(ctx, 1);
 
 	if (s_server_config.state)
 		SSL_CTX_set_info_callback(ctx, apps_ssl_info_callback);
@@ -1257,12 +1301,6 @@ s_server_main(int argc, char *argv[])
 		if (s_server_config.bugs)
 			SSL_CTX_set_options(ctx2, SSL_OP_ALL);
 		SSL_CTX_set_options(ctx2, s_server_config.off);
-		/*
-		 * DTLS: partial reads end up discarding unread UDP bytes :-(
-		 * Setting read ahead solves this problem.
-		 */
-		if (s_server_config.socket_type == SOCK_DGRAM)
-			SSL_CTX_set_read_ahead(ctx2, 1);
 
 		if (s_server_config.state)
 			SSL_CTX_set_info_callback(ctx2, apps_ssl_info_callback);
@@ -1527,8 +1565,7 @@ sv_body(char *hostname, int s, unsigned char *context)
 	}
 	SSL_clear(con);
 
-	if (SSL_version(con) == DTLS1_VERSION) {
-
+	if (SSL_is_dtls(con)) {
 		sbio = BIO_new_dgram(s, BIO_NOCLOSE);
 
 		if (s_server_config.enable_timeouts) {
@@ -1594,7 +1631,7 @@ sv_body(char *hostname, int s, unsigned char *context)
 			pfd[1].fd = s;
 			pfd[1].events = POLLIN;
 
-			if ((SSL_version(con) == DTLS1_VERSION) &&
+			if (SSL_is_dtls(con) &&
 			    DTLSv1_get_timeout(con, &timeout))
 				ptimeout = timeout.tv_sec * 1000 +
 				    timeout.tv_usec / 1000;
@@ -1603,10 +1640,9 @@ sv_body(char *hostname, int s, unsigned char *context)
 
 			i = poll(pfd, 2, ptimeout);
 
-			if ((SSL_version(con) == DTLS1_VERSION) &&
-			    DTLSv1_handle_timeout(con) > 0) {
+			if (SSL_is_dtls(con) &&
+			    DTLSv1_handle_timeout(con) > 0)
 				BIO_printf(bio_err, "TIMEOUT occured\n");
-			}
 			if (i <= 0)
 				continue;
 			if (pfd[0].revents) {
@@ -1652,7 +1688,7 @@ sv_body(char *hostname, int s, unsigned char *context)
 				}
 				if ((i <= 0) || (buf[0] == 'q')) {
 					BIO_printf(bio_s_out, "DONE\n");
-					if (SSL_version(con) != DTLS1_VERSION) {
+					if (!SSL_is_dtls(con)) {
 						shutdown(s, SHUT_RD);
 						close(s);
 					}

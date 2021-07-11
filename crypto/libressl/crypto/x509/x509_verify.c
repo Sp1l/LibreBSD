@@ -1,6 +1,6 @@
-/* $OpenBSD: x509_verify.c,v 1.13.4.1 2021/02/03 07:06:13 tb Exp $ */
+/* $OpenBSD: x509_verify.c,v 1.36 2021/03/13 23:01:49 tobhe Exp $ */
 /*
- * Copyright (c) 2020 Bob Beck <beck@openbsd.org>
+ * Copyright (c) 2020-2021 Bob Beck <beck@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* x509_verify - inspired by golang's crypto/x509/Verify */
+/* x509_verify - inspired by golang's crypto/x509.Verify */
 
 #include <errno.h>
 #include <stdio.h>
@@ -49,7 +49,11 @@ x509_verify_chain_new(void)
 		goto err;
 	if ((chain->certs = sk_X509_new_null()) == NULL)
 		goto err;
-	if ((chain->names = x509_constraints_names_new()) == NULL)
+	if ((chain->cert_errors = calloc(X509_VERIFY_MAX_CHAIN_CERTS,
+	    sizeof(int))) == NULL)
+		goto err;
+	if ((chain->names =
+	    x509_constraints_names_new(X509_VERIFY_MAX_CHAIN_NAMES)) == NULL)
 		goto err;
 
 	return chain;
@@ -63,6 +67,8 @@ x509_verify_chain_clear(struct x509_verify_chain *chain)
 {
 	sk_X509_pop_free(chain->certs, X509_free);
 	chain->certs = NULL;
+	free(chain->cert_errors);
+	chain->cert_errors = NULL;
 	x509_constraints_names_free(chain->names);
 	chain->names = NULL;
 }
@@ -85,6 +91,11 @@ x509_verify_chain_dup(struct x509_verify_chain *chain)
 		goto err;
 	if ((new_chain->certs = X509_chain_up_ref(chain->certs)) == NULL)
 		goto err;
+	if ((new_chain->cert_errors = calloc(X509_VERIFY_MAX_CHAIN_CERTS,
+	    sizeof(int))) == NULL)
+		goto err;
+	memcpy(new_chain->cert_errors, chain->cert_errors,
+	    X509_VERIFY_MAX_CHAIN_CERTS * sizeof(int));
 	if ((new_chain->names =
 	    x509_constraints_names_dup(chain->names)) == NULL)
 		goto err;
@@ -99,18 +110,32 @@ x509_verify_chain_append(struct x509_verify_chain *chain, X509 *cert,
     int *error)
 {
 	int verify_err = X509_V_ERR_UNSPECIFIED;
+	size_t idx;
 
 	if (!x509_constraints_extract_names(chain->names, cert,
 	    sk_X509_num(chain->certs) == 0, &verify_err)) {
 		*error = verify_err;
 		return 0;
 	}
+
 	X509_up_ref(cert);
 	if (!sk_X509_push(chain->certs, cert)) {
 		X509_free(cert);
 		*error = X509_V_ERR_OUT_OF_MEM;
 		return 0;
 	}
+
+	idx = sk_X509_num(chain->certs) - 1;
+	chain->cert_errors[idx] = *error;
+
+	/*
+	 * We've just added the issuer for the previous certificate,
+	 * clear its error if appropriate.
+	 */
+	if (idx > 1 && chain->cert_errors[idx - 1] ==
+	    X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+		chain->cert_errors[idx - 1] = X509_V_OK;
+
 	return 1;
 }
 
@@ -171,24 +196,43 @@ x509_verify_ctx_cert_is_root(struct x509_verify_ctx *ctx, X509 *cert)
 
 static int
 x509_verify_ctx_set_xsc_chain(struct x509_verify_ctx *ctx,
-    struct x509_verify_chain *chain)
+    struct x509_verify_chain *chain, int set_error, int is_trusted)
 {
-	size_t depth;
-	X509 *last = x509_verify_chain_last(chain);
+	size_t num_untrusted;
+	int i;
 
 	if (ctx->xsc == NULL)
 		return 1;
 
-	depth = sk_X509_num(chain->certs);
-	if (depth > 0)
-		depth--;
+	/*
+	 * XXX last_untrusted is actually the number of untrusted certs at the
+	 * bottom of the chain. This works now since we stop at the first
+	 * trusted cert. This will need fixing once we allow more than one
+	 * trusted certificate.
+	 */
+	num_untrusted = sk_X509_num(chain->certs);
+	if (is_trusted && num_untrusted > 0)
+		num_untrusted--;
+	ctx->xsc->last_untrusted = num_untrusted;
 
-	ctx->xsc->last_untrusted = depth ? depth - 1 : 0;
 	sk_X509_pop_free(ctx->xsc->chain, X509_free);
 	ctx->xsc->chain = X509_chain_up_ref(chain->certs);
 	if (ctx->xsc->chain == NULL)
-		return x509_verify_cert_error(ctx, last, depth,
+		return x509_verify_cert_error(ctx, NULL, 0,
 		    X509_V_ERR_OUT_OF_MEM, 0);
+
+	if (set_error) {
+		ctx->xsc->error = X509_V_OK;
+		ctx->xsc->error_depth = 0;
+		for (i = 0; i < sk_X509_num(chain->certs); i++) {
+			if (chain->cert_errors[i] != X509_V_OK) {
+				ctx->xsc->error = chain->cert_errors[i];
+				ctx->xsc->error_depth = i;
+				break;
+			}
+		}
+	}
+
 	return 1;
 }
 
@@ -208,6 +252,11 @@ x509_verify_ctx_add_chain(struct x509_verify_ctx *ctx,
 		return x509_verify_cert_error(ctx, last, depth,
 		    X509_V_ERR_CERT_CHAIN_TOO_LONG, 0);
 
+	/* Clear a get issuer failure for a root certificate. */
+	if (chain->cert_errors[depth] ==
+	    X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+		chain->cert_errors[depth] = X509_V_OK;
+
 	/*
 	 * If we have a legacy xsc, choose a validated chain,
 	 * and apply the extensions, revocation, and policy checks
@@ -217,7 +266,11 @@ x509_verify_ctx_add_chain(struct x509_verify_ctx *ctx,
 	 * knobs that are there for the fiddling.
 	 */
 	if (ctx->xsc != NULL) {
-		if (!x509_verify_ctx_set_xsc_chain(ctx, chain))
+		/* These may be set in one of the following calls. */
+		ctx->xsc->error = X509_V_OK;
+		ctx->xsc->error_depth = 0;
+
+		if (!x509_verify_ctx_set_xsc_chain(ctx, chain, 0, 1))
 			return 0;
 
 		/*
@@ -241,6 +294,18 @@ x509_verify_ctx_add_chain(struct x509_verify_ctx *ctx,
 
 		if (!x509_vfy_check_policy(ctx->xsc))
 			return 0;
+
+		/*
+		 * The above checks may have set ctx->xsc->error and
+		 * ctx->xsc->error_depth - save these for later on.
+		 */
+		if (ctx->xsc->error != X509_V_OK) {
+			if (ctx->xsc->error_depth < 0 ||
+			    ctx->xsc->error_depth >= X509_VERIFY_MAX_CHAIN_CERTS)
+				return 0;
+			chain->cert_errors[ctx->xsc->error_depth] =
+			    ctx->xsc->error;
+		}
 	}
 	/*
 	 * no xsc means we are being called from the non-legacy API,
@@ -322,8 +387,18 @@ x509_verify_consider_candidate(struct x509_verify_ctx *ctx, X509 *cert,
 	/* Fail if the certificate is already in the chain */
 	for (i = 0; i < sk_X509_num(current_chain->certs); i++) {
 		if (X509_cmp(sk_X509_value(current_chain->certs, i),
-		    candidate) == 0)
+		    candidate) == 0) {
+			if (is_root_cert) {
+				/*
+				 * Someone made a boo-boo and put their root
+				 * in with their intermediates - handle this
+				 * gracefully as we'll have already picked
+				 * this up as a shorter chain.
+				 */
+				ctx->dump_chain = 1;
+			}
 			return 0;
+		}
 	}
 
 	if (ctx->sig_checks++ > X509_VERIFY_MAX_SIGCHECKS) {
@@ -333,12 +408,11 @@ x509_verify_consider_candidate(struct x509_verify_ctx *ctx, X509 *cert,
 		return 0;
 	}
 
-
 	if (!x509_verify_parent_signature(candidate, cert, cert_md,
 	    &ctx->error)) {
-		    if (!x509_verify_cert_error(ctx, candidate, depth,
-			ctx->error, 0))
-			    return 0;
+		if (!x509_verify_cert_error(ctx, candidate, depth,
+		    ctx->error, 0))
+			return 0;
 	}
 
 	if (!x509_verify_cert_valid(ctx, candidate, current_chain))
@@ -351,8 +425,7 @@ x509_verify_consider_candidate(struct x509_verify_ctx *ctx, X509 *cert,
 		return 0;
 	}
 	if (!x509_verify_chain_append(new_chain, candidate, &ctx->error)) {
-		x509_verify_cert_error(ctx, candidate, depth,
-		    ctx->error, 0);
+		x509_verify_cert_error(ctx, candidate, depth, ctx->error, 0);
 		x509_verify_chain_free(new_chain);
 		return 0;
 	}
@@ -363,7 +436,7 @@ x509_verify_consider_candidate(struct x509_verify_ctx *ctx, X509 *cert,
 	 * give up.
 	 */
 	if (is_root_cert) {
-		if (!x509_verify_ctx_set_xsc_chain(ctx, new_chain)) {
+		if (!x509_verify_ctx_set_xsc_chain(ctx, new_chain, 0, 1)) {
 			x509_verify_chain_free(new_chain);
 			return 0;
 		}
@@ -401,7 +474,15 @@ x509_verify_build_chains(struct x509_verify_ctx *ctx, X509 *cert,
 {
 	unsigned char cert_md[EVP_MAX_MD_SIZE] = { 0 };
 	X509 *candidate;
-	int i, depth, count;
+	int i, depth, count, ret;
+
+	/*
+	 * If we are finding chains with an xsc, just stop after we have
+	 * one chain, there's no point in finding more, it just exercises
+	 * the potentially buggy callback processing in the calling software.
+	 */
+	if (ctx->xsc != NULL && ctx->chains_count > 0)
+		return;
 
 	depth = sk_X509_num(current_chain->certs);
 	if (depth > 0)
@@ -418,9 +499,23 @@ x509_verify_build_chains(struct x509_verify_ctx *ctx, X509 *cert,
 		return;
 
 	count = ctx->chains_count;
+	ctx->dump_chain = 0;
 	ctx->error = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY;
 	ctx->error_depth = depth;
+	if (ctx->xsc != NULL) {
+		/*
+		 * Long ago experiments at Muppet labs resulted in a
+		 * situation where software not only sees these errors
+		 * but forced developers to expect them in certain cases.
+		 * so we must mimic this awfulness for the legacy case.
+		 */
+		if (cert->ex_flags & EXFLAG_SS)
+			ctx->error = (depth == 0) ?
+			    X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+			    X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN;
+	}
 
+	/* Check to see if we have a trusted root issuer. */
 	for (i = 0; i < sk_X509_num(ctx->roots); i++) {
 		candidate = sk_X509_value(ctx->roots, i);
 		if (x509_verify_potential_parent(ctx, candidate, cert)) {
@@ -428,7 +523,23 @@ x509_verify_build_chains(struct x509_verify_ctx *ctx, X509 *cert,
 			    cert_md, 1, candidate, current_chain);
 		}
 	}
+	/* Check for legacy mode roots */
+	if (ctx->xsc != NULL) {
+		if ((ret = ctx->xsc->get_issuer(&candidate, ctx->xsc, cert)) < 0) {
+			x509_verify_cert_error(ctx, cert, depth,
+			    X509_V_ERR_STORE_LOOKUP, 0);
+			return;
+		}
+		if (ret > 0) {
+			if (x509_verify_potential_parent(ctx, candidate, cert)) {
+				x509_verify_consider_candidate(ctx, cert,
+				    cert_md, 1, candidate, current_chain);
+			}
+			X509_free(candidate);
+		}
+	}
 
+	/* Check intermediates after checking roots */
 	if (ctx->intermediates != NULL) {
 		for (i = 0; i < sk_X509_num(ctx->intermediates); i++) {
 			candidate = sk_X509_value(ctx->intermediates, i);
@@ -438,6 +549,7 @@ x509_verify_build_chains(struct x509_verify_ctx *ctx, X509 *cert,
 			}
 		}
 	}
+
 	if (ctx->chains_count > count) {
 		if (ctx->xsc != NULL) {
 			ctx->xsc->error = X509_V_OK;
@@ -445,9 +557,14 @@ x509_verify_build_chains(struct x509_verify_ctx *ctx, X509 *cert,
 			ctx->xsc->current_cert = cert;
 			(void) ctx->xsc->verify_cb(1, ctx->xsc);
 		}
-	} else if (ctx->error_depth == depth) {
-			(void) x509_verify_cert_error(ctx, cert, depth,
-			    ctx->error, 0);
+	} else if (ctx->error_depth == depth && !ctx->dump_chain) {
+		if (depth == 0 &&
+		    ctx->error == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+			ctx->error = X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE;
+		if (!x509_verify_ctx_set_xsc_chain(ctx, current_chain, 0, 0))
+			return;
+		(void) x509_verify_cert_error(ctx, cert, depth,
+		    ctx->error, 0);
 	}
 }
 
@@ -458,8 +575,13 @@ x509_verify_cert_hostname(struct x509_verify_ctx *ctx, X509 *cert, char *name)
 	size_t len;
 
 	if (name == NULL) {
-		if (ctx->xsc != NULL)
-			return x509_vfy_check_id(ctx->xsc);
+		if (ctx->xsc != NULL) {
+			int ret;
+
+			if ((ret = x509_vfy_check_id(ctx->xsc)) == 0)
+				ctx->error = ctx->xsc->error;
+			return ret;
+		}
 		return 1;
 	}
 	if ((candidate = strdup(name)) == NULL) {
@@ -515,8 +637,6 @@ int
 x509_verify_asn1_time_to_tm(const ASN1_TIME *atime, struct tm *tm, int notafter)
 {
 	int type;
-
-	memset(tm, 0, sizeof(*tm));
 
 	type = ASN1_time_parse(atime->data, atime->length, tm, atime->type);
 	if (type == -1)
@@ -601,11 +721,13 @@ x509_verify_validate_constraints(X509 *cert,
 		return 1;
 
 	if (cert->nc != NULL) {
-		if ((permitted = x509_constraints_names_new()) == NULL) {
+		if ((permitted = x509_constraints_names_new(
+		    X509_VERIFY_MAX_CHAIN_CONSTRAINTS)) == NULL) {
 			err = X509_V_ERR_OUT_OF_MEM;
 			goto err;
 		}
-		if ((excluded = x509_constraints_names_new()) == NULL) {
+		if ((excluded = x509_constraints_names_new(
+		    X509_VERIFY_MAX_CHAIN_CONSTRAINTS)) == NULL) {
 			err = X509_V_ERR_OUT_OF_MEM;
 			goto err;
 		}
@@ -634,6 +756,10 @@ x509_verify_cert_extensions(struct x509_verify_ctx *ctx, X509 *cert, int need_ca
 		CRYPTO_w_lock(CRYPTO_LOCK_X509);
 		x509v3_cache_extensions(cert);
 		CRYPTO_w_unlock(CRYPTO_LOCK_X509);
+		if (cert->ex_flags & EXFLAG_INVALID) {
+			ctx->error = X509_V_ERR_UNSPECIFIED;
+			return 0;
+		}
 	}
 
 	if (ctx->xsc != NULL)
@@ -853,13 +979,13 @@ x509_verify(struct x509_verify_ctx *ctx, X509 *leaf, char *name)
 
 	if (ctx->roots == NULL || ctx->max_depth == 0) {
 		ctx->error = X509_V_ERR_INVALID_CALL;
-		return 0;
+		goto err;
 	}
 
 	if (ctx->xsc != NULL) {
 		if (leaf != NULL || name != NULL) {
 			ctx->error = X509_V_ERR_INVALID_CALL;
-			return 0;
+			goto err;
 		}
 		leaf = ctx->xsc->cert;
 
@@ -872,34 +998,34 @@ x509_verify(struct x509_verify_ctx *ctx, X509 *leaf, char *name)
 		 */
 		if ((ctx->xsc->chain = sk_X509_new_null()) == NULL) {
 			ctx->error = X509_V_ERR_OUT_OF_MEM;
-			return 0;
+			goto err;
 		}
 		if (!X509_up_ref(leaf)) {
 			ctx->error = X509_V_ERR_OUT_OF_MEM;
-			return 0;
+			goto err;
 		}
 		if (!sk_X509_push(ctx->xsc->chain, leaf)) {
 			X509_free(leaf);
 			ctx->error = X509_V_ERR_OUT_OF_MEM;
-			return 0;
+			goto err;
 		}
 		ctx->xsc->error_depth = 0;
 		ctx->xsc->current_cert = leaf;
 	}
 
 	if (!x509_verify_cert_valid(ctx, leaf, NULL))
-		return 0;
+		goto err;
 
 	if (!x509_verify_cert_hostname(ctx, leaf, name))
-		return 0;
+		goto err;
 
 	if ((current_chain = x509_verify_chain_new()) == NULL) {
 		ctx->error = X509_V_ERR_OUT_OF_MEM;
-		return 0;
+		goto err;
 	}
 	if (!x509_verify_chain_append(current_chain, leaf, &ctx->error)) {
 		x509_verify_chain_free(current_chain);
-		return 0;
+		goto err;
 	}
 	if (x509_verify_ctx_cert_is_root(ctx, leaf))
 		x509_verify_ctx_add_chain(ctx, current_chain);
@@ -913,8 +1039,11 @@ x509_verify(struct x509_verify_ctx *ctx, X509 *leaf, char *name)
 	 * We could not find a validated chain, and for some reason do not
 	 * have an error set.
 	 */
-	if (ctx->chains_count == 0 && ctx->error == 0)
+	if (ctx->chains_count == 0 && ctx->error == X509_V_OK) {
 		ctx->error = X509_V_ERR_UNSPECIFIED;
+		if (ctx->xsc != NULL && ctx->xsc->error != X509_V_OK)
+			ctx->error = ctx->xsc->error;
+	}
 
 	/* Clear whatever errors happened if we have any validated chain */
 	if (ctx->chains_count > 0)
@@ -922,7 +1051,20 @@ x509_verify(struct x509_verify_ctx *ctx, X509 *leaf, char *name)
 
 	if (ctx->xsc != NULL) {
 		ctx->xsc->error = ctx->error;
-		return ctx->xsc->verify_cb(ctx->chains_count, ctx->xsc);
+		if (ctx->chains_count > 0) {
+			/* Take the first chain we found. */
+			if (!x509_verify_ctx_set_xsc_chain(ctx, ctx->chains[0],
+			    1, 1))
+				goto err;
+		}
+		return ctx->xsc->verify_cb(ctx->chains_count > 0, ctx->xsc);
 	}
 	return (ctx->chains_count);
+
+ err:
+	if (ctx->error == X509_V_OK)
+		ctx->error = X509_V_ERR_UNSPECIFIED;
+	if (ctx->xsc != NULL)
+		ctx->xsc->error = ctx->error;
+	return 0;
 }

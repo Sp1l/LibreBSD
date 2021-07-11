@@ -1,4 +1,4 @@
-/* $OpenBSD: ssl.h,v 1.178 2020/09/20 09:42:00 tb Exp $ */
+/* $OpenBSD: ssl.h,v 1.186 2021/03/31 16:59:32 tb Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -301,6 +301,7 @@ extern "C" {
 #define SSL_TXT_STREEBOG512		"STREEBOG512"
 
 #define SSL_TXT_DTLS1		"DTLSv1"
+#define SSL_TXT_DTLS1_2		"DTLSv1.2"
 #define SSL_TXT_SSLV2		"SSLv2"
 #define SSL_TXT_SSLV3		"SSLv3"
 #define SSL_TXT_TLSV1		"TLSv1"
@@ -519,6 +520,9 @@ struct ssl_session_st {
 #if defined(LIBRESSL_HAS_TLS1_3) || defined(LIBRESSL_INTERNAL)
 #define SSL_OP_NO_TLSv1_3				0x20000000L
 #endif
+
+#define SSL_OP_NO_DTLSv1				0x40000000L
+#define SSL_OP_NO_DTLSv1_2				0x80000000L
 
 /* SSL_OP_ALL: various bug workarounds that should be rather harmless. */
 #define SSL_OP_ALL \
@@ -1349,6 +1353,7 @@ int	SSL_use_certificate_ASN1(SSL *ssl, const unsigned char *d, int len);
 int	SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type);
 int	SSL_use_PrivateKey_file(SSL *ssl, const char *file, int type);
 int	SSL_use_certificate_file(SSL *ssl, const char *file, int type);
+int	SSL_use_certificate_chain_file(SSL *ssl, const char *file);
 int	SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 int	SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 int	SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type);
@@ -1443,9 +1448,8 @@ int SSL_set_purpose(SSL *s, int purpose);
 int SSL_CTX_set_trust(SSL_CTX *s, int trust);
 int SSL_set_trust(SSL *s, int trust);
 int SSL_set1_host(SSL *s, const char *hostname);
-#if defined(LIBRESSL_HAS_TLS1_3) || defined(LIBRESSL_INTERNAL)
+void SSL_set_hostflags(SSL *s, unsigned int flags);
 const char *SSL_get0_peername(SSL *s);
-#endif
 
 X509_VERIFY_PARAM *SSL_CTX_get0_param(SSL_CTX *ctx);
 int SSL_CTX_set1_param(SSL_CTX *ctx, X509_VERIFY_PARAM *vpm);
@@ -1457,6 +1461,7 @@ void	SSL_free(SSL *ssl);
 int	SSL_up_ref(SSL *ssl);
 int 	SSL_accept(SSL *ssl);
 int 	SSL_connect(SSL *ssl);
+int	SSL_is_dtls(const SSL *s);
 int	SSL_is_server(const SSL *s);
 int 	SSL_read(SSL *ssl, void *buf, int num);
 int 	SSL_peek(SSL *ssl, void *buf, int num);
@@ -1515,6 +1520,10 @@ const SSL_METHOD *TLS_client_method(void);	/* TLS v1.0 or later */
 const SSL_METHOD *DTLSv1_method(void);		/* DTLSv1.0 */
 const SSL_METHOD *DTLSv1_server_method(void);	/* DTLSv1.0 */
 const SSL_METHOD *DTLSv1_client_method(void);	/* DTLSv1.0 */
+
+const SSL_METHOD *DTLSv1_2_method(void);	/* DTLSv1.2 */
+const SSL_METHOD *DTLSv1_2_server_method(void);	/* DTLSv1.2 */
+const SSL_METHOD *DTLSv1_2_client_method(void);	/* DTLSv1.2 */
 
 const SSL_METHOD *DTLS_method(void);		/* DTLS v1.0 or later */
 const SSL_METHOD *DTLS_server_method(void);	/* DTLS v1.0 or later */

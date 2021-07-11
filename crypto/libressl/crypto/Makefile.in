@@ -89,50 +89,51 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_EXPLICIT_BZERO_FALSE@am__append_1 = libcompatnoopt.la
-@OPENSSL_NO_ASM_TRUE@am__append_2 = -DOPENSSL_NO_ASM
-@OPENSSLDIR_DEFINED_TRUE@am__append_3 = -DOPENSSLDIR=\"@OPENSSLDIR@\"
-@OPENSSLDIR_DEFINED_FALSE@am__append_4 = -DOPENSSLDIR=\"$(sysconfdir)/ssl\"
+@ENABLE_LIBTLS_ONLY_TRUE@am__append_1 = libcrypto.la
+@HAVE_EXPLICIT_BZERO_FALSE@am__append_2 = libcompatnoopt.la
+@OPENSSL_NO_ASM_TRUE@am__append_3 = -DOPENSSL_NO_ASM
+@OPENSSLDIR_DEFINED_TRUE@am__append_4 = -DOPENSSLDIR=\"@OPENSSLDIR@\"
+@OPENSSLDIR_DEFINED_FALSE@am__append_5 = -DOPENSSLDIR=\"$(sysconfdir)/ssl\"
 
 # compatibility functions that need to be built without optimizations
-@HAVE_EXPLICIT_BZERO_FALSE@am__append_5 = libcompatnoopt.la
-@HAVE_EXPLICIT_BZERO_FALSE@@HOST_WIN_TRUE@am__append_6 = compat/explicit_bzero_win.c
-@HAVE_EXPLICIT_BZERO_FALSE@@HOST_WIN_FALSE@am__append_7 = compat/explicit_bzero.c
-@HAVE_STRLCAT_FALSE@am__append_8 = compat/strlcat.c
-@HAVE_STRLCPY_FALSE@am__append_9 = compat/strlcpy.c
-@HAVE_STRNDUP_FALSE@am__append_10 = compat/strndup.c
+@HAVE_EXPLICIT_BZERO_FALSE@am__append_6 = libcompatnoopt.la
+@HAVE_EXPLICIT_BZERO_FALSE@@HOST_WIN_TRUE@am__append_7 = compat/explicit_bzero_win.c
+@HAVE_EXPLICIT_BZERO_FALSE@@HOST_WIN_FALSE@am__append_8 = compat/explicit_bzero.c
+@HAVE_STRLCAT_FALSE@am__append_9 = compat/strlcat.c
+@HAVE_STRLCPY_FALSE@am__append_10 = compat/strlcpy.c
+@HAVE_STRNDUP_FALSE@am__append_11 = compat/strndup.c
 # the only user of strnlen is strndup, so only build it if needed
-@HAVE_STRNDUP_FALSE@@HAVE_STRNLEN_FALSE@am__append_11 = compat/strnlen.c
-@HAVE_STRSEP_FALSE@am__append_12 = compat/strsep.c
-@HAVE_ASPRINTF_FALSE@am__append_13 = compat/bsd-asprintf.c
-@HAVE_FREEZERO_FALSE@am__append_14 = compat/freezero.c
-@HAVE_GETPAGESIZE_FALSE@am__append_15 = compat/getpagesize.c
-@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_TRUE@am__append_16 = compat/getprogname_linux.c
-@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_FALSE@@HOST_WIN_TRUE@am__append_17 = compat/getprogname_windows.c
-@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_FALSE@@HOST_WIN_FALSE@am__append_18 = compat/getprogname_unimpl.c
-@HAVE_TIMEGM_FALSE@am__append_19 = compat/timegm.c
-@HAVE_REALLOCARRAY_FALSE@am__append_20 = compat/reallocarray.c
-@HAVE_RECALLOCARRAY_FALSE@am__append_21 = compat/recallocarray.c
-@HAVE_SYSLOG_R_FALSE@am__append_22 = compat/syslog_r.c
-@HAVE_TIMINGSAFE_MEMCMP_FALSE@am__append_23 = compat/timingsafe_memcmp.c
-@HAVE_TIMINGSAFE_BCMP_FALSE@am__append_24 = compat/timingsafe_bcmp.c
-@HOST_WIN_TRUE@am__append_25 = compat/posix_win.c
-@HAVE_ARC4RANDOM_BUF_FALSE@am__append_26 = compat/arc4random.c \
+@HAVE_STRNDUP_FALSE@@HAVE_STRNLEN_FALSE@am__append_12 = compat/strnlen.c
+@HAVE_STRSEP_FALSE@am__append_13 = compat/strsep.c
+@HAVE_ASPRINTF_FALSE@am__append_14 = compat/bsd-asprintf.c
+@HAVE_FREEZERO_FALSE@am__append_15 = compat/freezero.c
+@HAVE_GETPAGESIZE_FALSE@am__append_16 = compat/getpagesize.c
+@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_TRUE@am__append_17 = compat/getprogname_linux.c
+@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_FALSE@@HOST_WIN_TRUE@am__append_18 = compat/getprogname_windows.c
+@HAVE_GETPROGNAME_FALSE@@HOST_LINUX_FALSE@@HOST_WIN_FALSE@am__append_19 = compat/getprogname_unimpl.c
+@HAVE_TIMEGM_FALSE@am__append_20 = compat/timegm.c
+@HAVE_REALLOCARRAY_FALSE@am__append_21 = compat/reallocarray.c
+@HAVE_RECALLOCARRAY_FALSE@am__append_22 = compat/recallocarray.c
+@HAVE_SYSLOG_R_FALSE@am__append_23 = compat/syslog_r.c
+@HAVE_TIMINGSAFE_MEMCMP_FALSE@am__append_24 = compat/timingsafe_memcmp.c
+@HAVE_TIMINGSAFE_BCMP_FALSE@am__append_25 = compat/timingsafe_bcmp.c
+@HOST_WIN_TRUE@am__append_26 = compat/posix_win.c
+@HAVE_ARC4RANDOM_BUF_FALSE@am__append_27 = compat/arc4random.c \
 @HAVE_ARC4RANDOM_BUF_FALSE@	compat/arc4random_uniform.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_AIX_TRUE@am__append_27 = compat/getentropy_aix.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_FREEBSD_TRUE@am__append_28 = compat/getentropy_freebsd.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_HPUX_TRUE@am__append_29 = compat/getentropy_hpux.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_LINUX_TRUE@am__append_30 = compat/getentropy_linux.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_NETBSD_TRUE@am__append_31 = compat/getentropy_netbsd.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_DARWIN_TRUE@am__append_32 = compat/getentropy_osx.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_SOLARIS_TRUE@am__append_33 = compat/getentropy_solaris.c
-@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_WIN_TRUE@am__append_34 = compat/getentropy_win.c
-@HOST_ASM_ELF_ARM_TRUE@am__append_35 = -DAES_ASM -DOPENSSL_BN_ASM_MONT \
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_AIX_TRUE@am__append_28 = compat/getentropy_aix.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_FREEBSD_TRUE@am__append_29 = compat/getentropy_freebsd.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_HPUX_TRUE@am__append_30 = compat/getentropy_hpux.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_LINUX_TRUE@am__append_31 = compat/getentropy_linux.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_NETBSD_TRUE@am__append_32 = compat/getentropy_netbsd.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_DARWIN_TRUE@am__append_33 = compat/getentropy_osx.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_SOLARIS_TRUE@am__append_34 = compat/getentropy_solaris.c
+@HAVE_ARC4RANDOM_BUF_FALSE@@HAVE_GETENTROPY_FALSE@@HOST_WIN_TRUE@am__append_35 = compat/getentropy_win.c
+@HOST_ASM_ELF_ARM_TRUE@am__append_36 = -DAES_ASM -DOPENSSL_BN_ASM_MONT \
 @HOST_ASM_ELF_ARM_TRUE@	-DOPENSSL_BN_ASM_GF2m -DGHASH_ASM \
 @HOST_ASM_ELF_ARM_TRUE@	-DSHA1_ASM -DSHA256_ASM -DSHA512_ASM \
 @HOST_ASM_ELF_ARM_TRUE@	-DOPENSSL_CPUID_OBJ
-@HOST_ASM_ELF_ARM_TRUE@am__append_36 = $(ASM_ARM_ELF)
-@HOST_ASM_ELF_X86_64_TRUE@am__append_37 = -DAES_ASM -DBSAES_ASM \
+@HOST_ASM_ELF_ARM_TRUE@am__append_37 = $(ASM_ARM_ELF)
+@HOST_ASM_ELF_X86_64_TRUE@am__append_38 = -DAES_ASM -DBSAES_ASM \
 @HOST_ASM_ELF_X86_64_TRUE@	-DVPAES_ASM -DOPENSSL_IA32_SSE2 \
 @HOST_ASM_ELF_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT \
 @HOST_ASM_ELF_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT5 \
@@ -140,8 +141,8 @@ host_triplet = @host@
 @HOST_ASM_ELF_X86_64_TRUE@	-DGHASH_ASM -DRSA_ASM -DSHA1_ASM \
 @HOST_ASM_ELF_X86_64_TRUE@	-DSHA256_ASM -DSHA512_ASM \
 @HOST_ASM_ELF_X86_64_TRUE@	-DWHIRLPOOL_ASM -DOPENSSL_CPUID_OBJ
-@HOST_ASM_ELF_X86_64_TRUE@am__append_38 = $(ASM_X86_64_ELF)
-@HOST_ASM_MACOSX_X86_64_TRUE@am__append_39 = -DAES_ASM -DBSAES_ASM \
+@HOST_ASM_ELF_X86_64_TRUE@am__append_39 = $(ASM_X86_64_ELF)
+@HOST_ASM_MACOSX_X86_64_TRUE@am__append_40 = -DAES_ASM -DBSAES_ASM \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DVPAES_ASM -DOPENSSL_IA32_SSE2 \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT5 \
@@ -150,8 +151,8 @@ host_triplet = @host@
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DSHA256_ASM -DSHA512_ASM \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DWHIRLPOOL_ASM \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_CPUID_OBJ
-@HOST_ASM_MACOSX_X86_64_TRUE@am__append_40 = $(ASM_X86_64_MACOSX)
-@HOST_ASM_MASM_X86_64_TRUE@am__append_41 = -DAES_ASM -DBSAES_ASM \
+@HOST_ASM_MACOSX_X86_64_TRUE@am__append_41 = $(ASM_X86_64_MACOSX)
+@HOST_ASM_MASM_X86_64_TRUE@am__append_42 = -DAES_ASM -DBSAES_ASM \
 @HOST_ASM_MASM_X86_64_TRUE@	-DVPAES_ASM -DOPENSSL_IA32_SSE2 \
 @HOST_ASM_MASM_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT \
 @HOST_ASM_MASM_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT5 \
@@ -159,31 +160,31 @@ host_triplet = @host@
 @HOST_ASM_MASM_X86_64_TRUE@	-DGHASH_ASM -DRSA_ASM -DSHA1_ASM \
 @HOST_ASM_MASM_X86_64_TRUE@	-DSHA256_ASM -DSHA512_ASM \
 @HOST_ASM_MASM_X86_64_TRUE@	-DWHIRLPOOL_ASM -DOPENSSL_CPUID_OBJ
-@HOST_ASM_MASM_X86_64_TRUE@am__append_42 = $(ASM_X86_64_MASM)
+@HOST_ASM_MASM_X86_64_TRUE@am__append_43 = $(ASM_X86_64_MASM)
 #libcrypto_la_CPPFLAGS += -DOPENSSL_BN_ASM_MONT
 #libcrypto_la_CPPFLAGS += -DOPENSSL_BN_ASM_MONT5
 #libcrypto_la_CPPFLAGS += -DOPENSSL_BN_ASM_GF2m
-@HOST_ASM_MINGW64_X86_64_TRUE@am__append_43 = -DAES_ASM -DBSAES_ASM \
+@HOST_ASM_MINGW64_X86_64_TRUE@am__append_44 = -DAES_ASM -DBSAES_ASM \
 @HOST_ASM_MINGW64_X86_64_TRUE@	-DVPAES_ASM -DOPENSSL_IA32_SSE2 \
 @HOST_ASM_MINGW64_X86_64_TRUE@	-DMD5_ASM -DGHASH_ASM -DRSA_ASM \
 @HOST_ASM_MINGW64_X86_64_TRUE@	-DSHA1_ASM -DSHA256_ASM \
 @HOST_ASM_MINGW64_X86_64_TRUE@	-DSHA512_ASM -DWHIRLPOOL_ASM \
 @HOST_ASM_MINGW64_X86_64_TRUE@	-DOPENSSL_CPUID_OBJ
-@HOST_ASM_MINGW64_X86_64_TRUE@am__append_44 = $(ASM_X86_64_MINGW64)
-@HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@am__append_45 = aes/aes_cbc.c \
+@HOST_ASM_MINGW64_X86_64_TRUE@am__append_45 = $(ASM_X86_64_MINGW64)
+@HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@am__append_46 = aes/aes_cbc.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	aes/aes_core.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	camellia/camellia.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	camellia/cmll_cbc.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	rc4/rc4_enc.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	rc4/rc4_skey.c \
 @HOST_ASM_ELF_ARM_FALSE@@HOST_ASM_ELF_X86_64_FALSE@@HOST_ASM_MACOSX_X86_64_FALSE@@HOST_ASM_MASM_X86_64_FALSE@@HOST_ASM_MINGW64_X86_64_FALSE@	whrlpool/wp_block.c
-@HOST_WIN_FALSE@am__append_46 = crypto_lock.c
-@HOST_WIN_TRUE@am__append_47 = compat/crypto_lock_win.c
-@HOST_WIN_FALSE@am__append_48 = bio/b_posix.c
-@HOST_WIN_TRUE@am__append_49 = bio/b_win.c
-@HOST_WIN_FALSE@am__append_50 = bio/bss_log.c
-@HOST_WIN_FALSE@am__append_51 = ui/ui_openssl.c
-@HOST_WIN_TRUE@am__append_52 = ui/ui_openssl_win.c
+@HOST_WIN_FALSE@am__append_47 = crypto_lock.c
+@HOST_WIN_TRUE@am__append_48 = compat/crypto_lock_win.c
+@HOST_WIN_FALSE@am__append_49 = bio/b_posix.c
+@HOST_WIN_TRUE@am__append_50 = bio/b_win.c
+@HOST_WIN_FALSE@am__append_51 = bio/bss_log.c
+@HOST_WIN_FALSE@am__append_52 = ui/ui_openssl.c
+@HOST_WIN_TRUE@am__append_53 = ui/ui_openssl_win.c
 subdir = crypto
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_add_fortify_source.m4 \
@@ -306,7 +307,7 @@ libcompatnoopt_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(libcompatnoopt_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 @HAVE_EXPLICIT_BZERO_FALSE@am_libcompatnoopt_la_rpath =
-libcrypto_la_DEPENDENCIES = libcompat.la $(am__append_1)
+libcrypto_la_DEPENDENCIES = libcompat.la $(am__append_2)
 am__libcrypto_la_SOURCES_DIST = aes/aes-elf-armv4.S \
 	bn/gf2m-elf-armv4.S bn/mont-elf-armv4.S sha/sha1-elf-armv4.S \
 	sha/sha512-elf-armv4.S sha/sha256-elf-armv4.S \
@@ -914,6 +915,8 @@ libcrypto_la_OBJECTS = $(am_libcrypto_la_OBJECTS)
 libcrypto_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libcrypto_la_LDFLAGS) $(LDFLAGS) -o $@
+@ENABLE_LIBTLS_ONLY_FALSE@am_libcrypto_la_rpath = -rpath $(libdir)
+@ENABLE_LIBTLS_ONLY_TRUE@am_libcrypto_la_rpath =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -1807,7 +1810,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/compat \
 	-I$(top_srcdir)/crypto/ecdh -I$(top_srcdir)/crypto/ecdsa \
 	-I$(top_srcdir)/crypto/evp -I$(top_srcdir)/crypto/modes \
 	-I$(top_srcdir)/crypto
-lib_LTLIBRARIES = libcrypto.la
+noinst_LTLIBRARIES = libcompat.la $(am__append_1) $(am__append_6)
+@ENABLE_LIBTLS_ONLY_FALSE@lib_LTLIBRARIES = libcrypto.la
 
 # needed for a CMake target
 EXTRA_DIST = VERSION CMakeLists.txt crypto.sym compat/strcasecmp.c \
@@ -1818,27 +1822,26 @@ CLEANFILES = crypto_portable.sym libcrypto_la_objects.mk
 libcrypto_la_LDFLAGS = -version-info @LIBCRYPTO_VERSION@ -no-undefined -export-symbols crypto_portable.sym
 EXTRA_libcrypto_la_DEPENDENCIES = crypto_portable.sym \
 	libcrypto_la_objects.mk
-libcrypto_la_LIBADD = libcompat.la $(am__append_1)
+libcrypto_la_LIBADD = libcompat.la $(am__append_2)
 libcrypto_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBRESSL_INTERNAL \
-	-DOPENSSL_NO_HW_PADLOCK $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_35) $(am__append_37) \
-	$(am__append_39) $(am__append_41) $(am__append_43)
-noinst_LTLIBRARIES = libcompat.la $(am__append_5)
+	-DOPENSSL_NO_HW_PADLOCK $(am__append_3) $(am__append_4) \
+	$(am__append_5) $(am__append_36) $(am__append_38) \
+	$(am__append_40) $(am__append_42) $(am__append_44)
 @HAVE_EXPLICIT_BZERO_FALSE@libcompatnoopt_la_CFLAGS = -O0
 @HAVE_EXPLICIT_BZERO_FALSE@libcompatnoopt_la_SOURCES =  \
-@HAVE_EXPLICIT_BZERO_FALSE@	$(am__append_6) $(am__append_7)
+@HAVE_EXPLICIT_BZERO_FALSE@	$(am__append_7) $(am__append_8)
 
 # other compatibility functions
-libcompat_la_SOURCES = $(am__append_8) $(am__append_9) \
-	$(am__append_10) $(am__append_11) $(am__append_12) \
-	$(am__append_13) $(am__append_14) $(am__append_15) \
-	$(am__append_16) $(am__append_17) $(am__append_18) \
-	$(am__append_19) $(am__append_20) $(am__append_21) \
-	$(am__append_22) $(am__append_23) $(am__append_24) \
-	$(am__append_25) $(am__append_26) $(am__append_27) \
-	$(am__append_28) $(am__append_29) $(am__append_30) \
-	$(am__append_31) $(am__append_32) $(am__append_33) \
-	$(am__append_34)
+libcompat_la_SOURCES = $(am__append_9) $(am__append_10) \
+	$(am__append_11) $(am__append_12) $(am__append_13) \
+	$(am__append_14) $(am__append_15) $(am__append_16) \
+	$(am__append_17) $(am__append_18) $(am__append_19) \
+	$(am__append_20) $(am__append_21) $(am__append_22) \
+	$(am__append_23) $(am__append_24) $(am__append_25) \
+	$(am__append_26) $(am__append_27) $(am__append_28) \
+	$(am__append_29) $(am__append_30) $(am__append_31) \
+	$(am__append_32) $(am__append_33) $(am__append_34) \
+	$(am__append_35)
 libcompat_la_LIBADD = $(PLATFORM_LDADD)
 
 # rc4
@@ -1960,10 +1963,10 @@ noinst_HEADERS = compat/arc4random.h compat/arc4random_aix.h \
 # whrlpool
 
 # x509
-libcrypto_la_SOURCES = $(am__append_36) $(am__append_38) \
-	$(am__append_40) $(am__append_42) $(am__append_44) \
-	$(am__append_45) cpt_err.c cryptlib.c crypto_init.c \
-	$(am__append_46) $(am__append_47) cversion.c ex_data.c \
+libcrypto_la_SOURCES = $(am__append_37) $(am__append_39) \
+	$(am__append_41) $(am__append_43) $(am__append_45) \
+	$(am__append_46) cpt_err.c cryptlib.c crypto_init.c \
+	$(am__append_47) $(am__append_48) cversion.c ex_data.c \
 	malloc-wrapper.c mem_clr.c mem_dbg.c o_init.c o_str.c o_time.c \
 	aes/aes_cfb.c aes/aes_ctr.c aes/aes_ecb.c aes/aes_ige.c \
 	aes/aes_misc.c aes/aes_ofb.c aes/aes_wrap.c asn1/a_bitstr.c \
@@ -1987,11 +1990,11 @@ libcrypto_la_SOURCES = $(am__append_36) $(am__append_38) \
 	asn1/x_pkey.c asn1/x_pubkey.c asn1/x_req.c asn1/x_sig.c \
 	asn1/x_spki.c asn1/x_val.c asn1/x_x509.c asn1/x_x509a.c \
 	bf/bf_cfb64.c bf/bf_ecb.c bf/bf_enc.c bf/bf_ofb64.c \
-	bf/bf_skey.c bio/b_dump.c $(am__append_48) bio/b_print.c \
-	bio/b_sock.c $(am__append_49) bio/bf_buff.c bio/bf_nbio.c \
+	bf/bf_skey.c bio/b_dump.c $(am__append_49) bio/b_print.c \
+	bio/b_sock.c $(am__append_50) bio/bf_buff.c bio/bf_nbio.c \
 	bio/bf_null.c bio/bio_cb.c bio/bio_err.c bio/bio_lib.c \
 	bio/bio_meth.c bio/bss_acpt.c bio/bss_bio.c bio/bss_conn.c \
-	bio/bss_dgram.c bio/bss_fd.c bio/bss_file.c $(am__append_50) \
+	bio/bss_dgram.c bio/bss_fd.c bio/bss_file.c $(am__append_51) \
 	bio/bss_mem.c bio/bss_null.c bio/bss_sock.c bn/bn_add.c \
 	bn/bn_asm.c bn/bn_blind.c bn/bn_const.c bn/bn_ctx.c \
 	bn/bn_depr.c bn/bn_div.c bn/bn_err.c bn/bn_exp.c bn/bn_exp2.c \
@@ -2095,7 +2098,7 @@ libcrypto_la_SOURCES = $(am__append_36) $(am__append_38) \
 	ts/ts_err.c ts/ts_lib.c ts/ts_req_print.c ts/ts_req_utils.c \
 	ts/ts_rsp_print.c ts/ts_rsp_sign.c ts/ts_rsp_utils.c \
 	ts/ts_rsp_verify.c ts/ts_verify_ctx.c txt_db/txt_db.c \
-	ui/ui_err.c ui/ui_lib.c $(am__append_51) $(am__append_52) \
+	ui/ui_err.c ui/ui_lib.c $(am__append_52) $(am__append_53) \
 	ui/ui_util.c whrlpool/wp_dgst.c x509/by_dir.c x509/by_file.c \
 	x509/by_mem.c x509/pcy_cache.c x509/pcy_data.c x509/pcy_lib.c \
 	x509/pcy_map.c x509/pcy_node.c x509/pcy_tree.c \
@@ -3908,7 +3911,7 @@ poly1305/libcrypto_la-poly1305-donna.lo: poly1305/$(am__dirstamp) \
 	poly1305/$(DEPDIR)/$(am__dirstamp)
 
 libcrypto.la: $(libcrypto_la_OBJECTS) $(libcrypto_la_DEPENDENCIES) $(EXTRA_libcrypto_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libcrypto_la_LINK) -rpath $(libdir) $(libcrypto_la_OBJECTS) $(libcrypto_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libcrypto_la_LINK) $(am_libcrypto_la_rpath) $(libcrypto_la_OBJECTS) $(libcrypto_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

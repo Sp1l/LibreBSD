@@ -89,6 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @ENABLE_TESTS_TRUE@am__append_1 = tests
+@ENABLE_LIBTLS_ONLY_FALSE@am__append_2 = libcrypto.pc libssl.pc openssl.pc
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_add_fortify_source.m4 \
@@ -370,10 +371,11 @@ top_srcdir = @top_srcdir@
 SUBDIRS = crypto ssl tls include apps man $(am__append_1)
 ACLOCAL_AMFLAGS = -I m4
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libcrypto.pc libssl.pc libtls.pc openssl.pc
+pkgconfig_DATA = libtls.pc $(am__append_2)
 EXTRA_DIST = README.md README.windows VERSION config scripts \
 	CMakeLists.txt cmake_export_symbol.cmake \
-	cmake_uninstall.cmake.in FindLibreSSL.cmake
+	cmake_uninstall.cmake.in FindLibreSSL.cmake cert.pem \
+	openssl.cnf x509v3.cnf
 all: all-recursive
 
 .SUFFIXES:
@@ -819,7 +821,8 @@ install-dvi: install-dvi-recursive
 install-dvi-am:
 
 install-exec-am:
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 install-html: install-html-recursive
 
 install-html-am:
@@ -858,9 +861,10 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am: uninstall-pkgconfigDATA
+uninstall-am: uninstall-local uninstall-pkgconfigDATA
 
-.MAKE: $(am__recursive_targets) install-am install-strip
+.MAKE: $(am__recursive_targets) install-am install-exec-am \
+	install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-am clean clean-cscope clean-generic \
@@ -871,19 +875,47 @@ uninstall-am: uninstall-pkgconfigDATA
 	distcleancheck distdir distuninstallcheck dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-pkgconfigDATA install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs installdirs-am \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am uninstall-pkgconfigDATA
+	install-exec-am install-exec-hook install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-pkgconfigDATA install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	installdirs-am maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
+	ps ps-am tags tags-am uninstall uninstall-am uninstall-local \
+	uninstall-pkgconfigDATA
 
 .PRECIOUS: Makefile
 
 
 .PHONY: install_sw
 install_sw: install
+
+install-exec-hook:
+	@if [ "@OPENSSLDIR@x" != "x" ]; then \
+		OPENSSLDIR="$(DESTDIR)@OPENSSLDIR@"; \
+	else \
+		OPENSSLDIR="$(DESTDIR)$(sysconfdir)/ssl"; \
+	fi; \
+	mkdir -p "$$OPENSSLDIR/certs"; \
+	for i in cert.pem openssl.cnf x509v3.cnf; do \
+		if [ ! -f "$$OPENSSLDIR/$i" ]; then \
+			$(INSTALL) -m 644 "$(srcdir)/$$i" "$$OPENSSLDIR/$$i"; \
+		else \
+			echo " $$OPENSSLDIR/$$i already exists, install will not overwrite"; \
+		fi \
+	done
+
+uninstall-local:
+	@if [ "@OPENSSLDIR@x" != "x" ]; then \
+		OPENSSLDIR="$(DESTDIR)@OPENSSLDIR@"; \
+	else \
+		OPENSSLDIR="$(DESTDIR)$(sysconfdir)/ssl"; \
+	fi; \
+	for i in cert.pem openssl.cnf x509v3.cnf; do \
+		if cmp -s "$$OPENSSLDIR/$$i" "$(srcdir)/$$i"; then \
+			rm -f "$$OPENSSLDIR/$$i"; \
+		fi \
+	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

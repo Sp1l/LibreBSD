@@ -1,4 +1,4 @@
-/* $OpenBSD: servertest.c,v 1.3 2020/05/11 18:18:21 jsing Exp $ */
+/* $OpenBSD: servertest.c,v 1.5 2021/01/22 15:56:17 tb Exp $ */
 /*
  * Copyright (c) 2015, 2016, 2017 Joel Sing <jsing@openbsd.org>
  *
@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
-const SSL_METHOD *tls_legacy_server_method(void);
+const SSL_METHOD *tls_legacy_method(void);
 
 char *server_ca_file;
 char *server_cert_file;
@@ -91,7 +91,7 @@ static struct server_hello_test server_hello_tests[] = {
 		.desc = "TLSv1.0 in SSLv2 record",
 		.client_hello = sslv2_client_hello_tls10,
 		.client_hello_len = sizeof(sslv2_client_hello_tls10),
-		.ssl_method = tls_legacy_server_method,
+		.ssl_method = tls_legacy_method,
 		.ssl_clear_options = SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1,
 		.ssl_set_options = 0,
 	},
@@ -99,7 +99,7 @@ static struct server_hello_test server_hello_tests[] = {
 		.desc = "TLSv1.2 in SSLv2 record",
 		.client_hello = sslv2_client_hello_tls12,
 		.client_hello_len = sizeof(sslv2_client_hello_tls12),
-		.ssl_method = tls_legacy_server_method,
+		.ssl_method = tls_legacy_method,
 		.ssl_clear_options = SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1,
 		.ssl_set_options = 0,
 	},
@@ -159,7 +159,7 @@ server_hello_test(int testno, struct server_hello_test *sht)
 	wbio->references = 2;
 
 	SSL_set_bio(ssl, rbio, wbio);
-	
+
 	if (SSL_accept(ssl) != 0) {
 		fprintf(stderr, "SSL_accept() returned non-zero\n");
 		ERR_print_errors_fp(stderr);
@@ -172,8 +172,10 @@ server_hello_test(int testno, struct server_hello_test *sht)
 	SSL_CTX_free(ssl_ctx);
 	SSL_free(ssl);
 
-	rbio->references = 1;
-	wbio->references = 1;
+	if (rbio != NULL)
+		rbio->references = 1;
+	if (wbio != NULL)
+		wbio->references = 1;
 
 	BIO_free(rbio);
 	BIO_free(wbio);

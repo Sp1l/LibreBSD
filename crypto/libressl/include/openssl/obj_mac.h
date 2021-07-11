@@ -853,9 +853,29 @@
 #define NID_id_smime_ct_compressedData		786
 #define OBJ_id_smime_ct_compressedData		OBJ_id_smime_ct,9L
 
+#define SN_id_ct_routeOriginAuthz		"id-ct-routeOriginAuthz"
+#define NID_id_ct_routeOriginAuthz		1001
+#define OBJ_id_ct_routeOriginAuthz		OBJ_id_smime_ct,24L
+
+#define SN_id_ct_rpkiManifest		"id-ct-rpkiManifest"
+#define NID_id_ct_rpkiManifest		1002
+#define OBJ_id_ct_rpkiManifest		OBJ_id_smime_ct,26L
+
 #define SN_id_ct_asciiTextWithCRLF		"id-ct-asciiTextWithCRLF"
 #define NID_id_ct_asciiTextWithCRLF		787
 #define OBJ_id_ct_asciiTextWithCRLF		OBJ_id_smime_ct,27L
+
+#define SN_id_ct_rpkiGhostbusters		"id-ct-rpkiGhostbusters"
+#define NID_id_ct_rpkiGhostbusters		1003
+#define OBJ_id_ct_rpkiGhostbusters		OBJ_id_smime_ct,35L
+
+#define SN_id_ct_resourceTaggedAttest		"id-ct-resourceTaggedAttest"
+#define NID_id_ct_resourceTaggedAttest		1004
+#define OBJ_id_ct_resourceTaggedAttest		OBJ_id_smime_ct,36L
+
+#define SN_id_ct_geofeedCSVwithCRLF		"id-ct-geofeedCSVwithCRLF"
+#define NID_id_ct_geofeedCSVwithCRLF		1013
+#define OBJ_id_ct_geofeedCSVwithCRLF		OBJ_id_smime_ct,47L
 
 #define SN_id_smime_aa_receiptRequest		"id-smime-aa-receiptRequest"
 #define NID_id_smime_aa_receiptRequest		212
@@ -1366,6 +1386,10 @@
 #define NID_id_cct		268
 #define OBJ_id_cct		OBJ_id_pkix,12L
 
+#define SN_id_cp		"id-cp"
+#define NID_id_cp		1005
+#define OBJ_id_cp		OBJ_id_pkix,14L
+
 #define SN_id_ppl		"id-ppl"
 #define NID_id_ppl		662
 #define OBJ_id_ppl		OBJ_id_pkix,21L
@@ -1489,6 +1513,14 @@
 #define LN_proxyCertInfo		"Proxy Certificate Information"
 #define NID_proxyCertInfo		663
 #define OBJ_proxyCertInfo		OBJ_id_pe,14L
+
+#define SN_sbgp_ipAddrBlockv2		"sbgp-ipAddrBlockv2"
+#define NID_sbgp_ipAddrBlockv2		1006
+#define OBJ_sbgp_ipAddrBlockv2		OBJ_id_pe,28L
+
+#define SN_sbgp_autonomousSysNumv2		"sbgp-autonomousSysNumv2"
+#define NID_sbgp_autonomousSysNumv2		1007
+#define OBJ_sbgp_autonomousSysNumv2		OBJ_id_pe,29L
 
 #define SN_id_qt_cps		"id-qt-cps"
 #define LN_id_qt_cps		"Policy Qualifier CPS"
@@ -1823,6 +1855,14 @@
 #define NID_id_cct_PKIResponse		362
 #define OBJ_id_cct_PKIResponse		OBJ_id_cct,3L
 
+#define SN_ipAddr_asNumber		"ipAddr-asNumber"
+#define NID_ipAddr_asNumber		1008
+#define OBJ_ipAddr_asNumber		OBJ_id_cp,2L
+
+#define SN_ipAddr_asNumberv2		"ipAddr-asNumberv2"
+#define NID_ipAddr_asNumberv2		1009
+#define OBJ_ipAddr_asNumberv2		OBJ_id_cp,3L
+
 #define SN_id_ppl_anyLanguage		"id-ppl-anyLanguage"
 #define LN_id_ppl_anyLanguage		"Any language"
 #define NID_id_ppl_anyLanguage		664
@@ -1862,6 +1902,21 @@
 #define LN_caRepository		"CA Repository"
 #define NID_caRepository		785
 #define OBJ_caRepository		OBJ_id_ad,5L
+
+#define SN_rpkiManifest		"rpkiManifest"
+#define LN_rpkiManifest		"RPKI Manifest"
+#define NID_rpkiManifest		1010
+#define OBJ_rpkiManifest		OBJ_id_ad,10L
+
+#define SN_signedObject		"signedObject"
+#define LN_signedObject		"Signed Object"
+#define NID_signedObject		1011
+#define OBJ_signedObject		OBJ_id_ad,11L
+
+#define SN_rpkiNotify		"rpkiNotify"
+#define LN_rpkiNotify		"RPKI Notify"
+#define NID_rpkiNotify		1012
+#define OBJ_rpkiNotify		OBJ_id_ad,13L
 
 #define OBJ_id_pkix_OCSP		OBJ_ad_OCSP
 

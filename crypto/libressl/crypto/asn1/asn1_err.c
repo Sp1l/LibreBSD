@@ -1,4 +1,4 @@
-/* $OpenBSD: asn1_err.c,v 1.21.12.1 2020/12/08 15:08:47 tb Exp $ */
+/* $OpenBSD: asn1_err.c,v 1.22 2020/12/08 15:06:42 tb Exp $ */
 /* ====================================================================
  * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
  *

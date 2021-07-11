@@ -119,7 +119,7 @@ if(WIN32)
 	add_definitions(-D_REENTRANT -D_POSIX_THREAD_SAFE_FUNCTIONS)
 	add_definitions(-DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0600)
 	add_definitions(-DCPPFLAGS -DNO_SYSLOG -DNO_CRYPT)
-	set(PLATFORM_LIBS ${PLATFORM_LIBS} ws2_32)
+	set(PLATFORM_LIBS ${PLATFORM_LIBS} ws2_32 bcrypt)
 endif()
 
 if(MSVC)
@@ -367,6 +367,17 @@ if(NOT MSVC)
 	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pkgconfig
 		DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
+
+if(NOT "${OPENSSLDIR}" STREQUAL "")
+	set(CONF_DIR "${OPENSSLDIR}")
+else()
+	set(CONF_DIR "${CMAKE_INSTALL_PREFIX}/etc/ssl")
+endif()
+
+if(ENABLE_LIBRESSL_INSTALL)
+	install(FILES cert.pem openssl.cnf x509v3.cnf DESTINATION ${CONF_DIR})
+	install(DIRECTORY DESTINATION ${CONF_DIR}/certs)
+endif(ENABLE_LIBRESSL_INSTALL)
 
 if(NOT TARGET uninstall)
 	configure_file(

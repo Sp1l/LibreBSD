@@ -1,4 +1,4 @@
-/* $OpenBSD: d1_lib.c,v 1.50 2020/09/26 14:43:17 jsing Exp $ */
+/* $OpenBSD: d1_lib.c,v 1.53 2021/02/20 07:29:07 jsing Exp $ */
 /*
  * DTLS implementation written by Nagendra Modadugu
  * (nagendra@cs.stanford.edu) for the OpenSSL project 2005.
@@ -73,10 +73,6 @@
 void dtls1_hm_fragment_free(hm_fragment *frag);
 
 static int dtls1_listen(SSL *s, struct sockaddr *client);
-
-SSL3_ENC_METHOD DTLSv1_enc_data = {
-	.enc_flags = SSL_ENC_FLAG_EXPLICIT_IV,
-};
 
 int
 dtls1_new(SSL *s)
@@ -255,14 +251,15 @@ dtls1_ctrl(SSL *s, int cmd, long larg, void *parg)
 const SSL_CIPHER *
 dtls1_get_cipher(unsigned int u)
 {
-	const SSL_CIPHER *ciph = ssl3_get_cipher(u);
+	const SSL_CIPHER *cipher;
 
-	if (ciph != NULL) {
-		if (ciph->algorithm_enc == SSL_RC4)
-			return NULL;
-	}
+	if ((cipher = ssl3_get_cipher(u)) == NULL)
+		return NULL;
 
-	return ciph;
+	if (cipher->algorithm_enc == SSL_RC4)
+		return NULL;
+
+	return cipher;
 }
 
 void
@@ -426,25 +423,4 @@ dtls1_listen(SSL *s, struct sockaddr *client)
 
 	(void)BIO_dgram_get_peer(SSL_get_rbio(s), client);
 	return 1;
-}
-
-void
-dtls1_build_sequence_number(unsigned char *dst, unsigned char *seq,
-    unsigned short epoch)
-{
-	CBB cbb;
-
-	if (!CBB_init_fixed(&cbb, dst, SSL3_SEQUENCE_SIZE))
-		goto err;
-	if (!CBB_add_u16(&cbb, epoch))
-		goto err;
-	if (!CBB_add_bytes(&cbb, &seq[2], SSL3_SEQUENCE_SIZE - 2))
-		goto err;
-	if (!CBB_finish(&cbb, NULL, NULL))
-		goto err;
-
-	return;
-
- err:
-	CBB_cleanup(&cbb);
 }

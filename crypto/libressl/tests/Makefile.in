@@ -112,12 +112,13 @@ TESTS = aeadtest.sh aes_wrap$(EXEEXT) $(am__append_2) asn1evp$(EXEEXT) \
 	$(am__append_13) $(am__EXEEXT_6) rmdtest$(EXEEXT) \
 	rsa_test$(EXEEXT) servertest.sh sha1test$(EXEEXT) \
 	sha256test$(EXEEXT) sha512test$(EXEEXT) sm3test$(EXEEXT) \
-	sm4test$(EXEEXT) ssl_versions$(EXEEXT) ssltest.sh testdsa.sh \
-	testenc.sh testrsa.sh timingsafe$(EXEEXT) tlsexttest$(EXEEXT) \
-	tlstest.sh tls_ext_alpn$(EXEEXT) tls_prf$(EXEEXT) \
-	utf8test$(EXEEXT) valid_handshakes_terminate$(EXEEXT) \
-	verifytest$(EXEEXT) x25519test$(EXEEXT) x509attribute$(EXEEXT) \
-	x509_info$(EXEEXT) x509name$(EXEEXT)
+	sm4test$(EXEEXT) ssl_methods$(EXEEXT) ssl_versions$(EXEEXT) \
+	ssltest.sh testdsa.sh testenc.sh testrsa.sh \
+	timingsafe$(EXEEXT) tlsexttest$(EXEEXT) tlstest.sh \
+	tls_ext_alpn$(EXEEXT) tls_prf$(EXEEXT) utf8test$(EXEEXT) \
+	valid_handshakes_terminate$(EXEEXT) verifytest$(EXEEXT) \
+	x25519test$(EXEEXT) x509attribute$(EXEEXT) x509_info$(EXEEXT) \
+	x509name$(EXEEXT)
 check_PROGRAMS = aeadtest$(EXEEXT) aes_wrap$(EXEEXT) $(am__EXEEXT_1) \
 	asn1evp$(EXEEXT) asn1test$(EXEEXT) asn1time$(EXEEXT) \
 	base64test$(EXEEXT) bftest$(EXEEXT) $(am__EXEEXT_2) \
@@ -141,12 +142,13 @@ check_PROGRAMS = aeadtest$(EXEEXT) aes_wrap$(EXEEXT) $(am__EXEEXT_1) \
 	record_layer_test$(EXEEXT) rfc5280time$(EXEEXT) \
 	rmdtest$(EXEEXT) rsa_test$(EXEEXT) servertest$(EXEEXT) \
 	sha1test$(EXEEXT) sha256test$(EXEEXT) sha512test$(EXEEXT) \
-	sm3test$(EXEEXT) sm4test$(EXEEXT) ssl_versions$(EXEEXT) \
-	ssltest$(EXEEXT) timingsafe$(EXEEXT) tlsexttest$(EXEEXT) \
-	tlstest$(EXEEXT) tls_ext_alpn$(EXEEXT) tls_prf$(EXEEXT) \
-	utf8test$(EXEEXT) valid_handshakes_terminate$(EXEEXT) \
-	verifytest$(EXEEXT) x25519test$(EXEEXT) x509attribute$(EXEEXT) \
-	x509_info$(EXEEXT) x509name$(EXEEXT)
+	sm3test$(EXEEXT) sm4test$(EXEEXT) ssl_methods$(EXEEXT) \
+	ssl_versions$(EXEEXT) ssltest$(EXEEXT) timingsafe$(EXEEXT) \
+	tlsexttest$(EXEEXT) tlstest$(EXEEXT) tls_ext_alpn$(EXEEXT) \
+	tls_prf$(EXEEXT) utf8test$(EXEEXT) \
+	valid_handshakes_terminate$(EXEEXT) verifytest$(EXEEXT) \
+	x25519test$(EXEEXT) x509attribute$(EXEEXT) x509_info$(EXEEXT) \
+	x509name$(EXEEXT)
 
 # arc4randomforktest
 # Windows/mingw does not have fork, but Cygwin does.
@@ -688,6 +690,13 @@ sm4test_DEPENDENCIES = $(abs_top_builddir)/tls/.libs/libtls.a \
 	$(abs_top_builddir)/ssl/.libs/libssl.a \
 	$(abs_top_builddir)/crypto/.libs/libcrypto.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) $(am__append_1)
+am_ssl_methods_OBJECTS = ssl_methods.$(OBJEXT)
+ssl_methods_OBJECTS = $(am_ssl_methods_OBJECTS)
+ssl_methods_LDADD = $(LDADD)
+ssl_methods_DEPENDENCIES = $(abs_top_builddir)/tls/.libs/libtls.a \
+	$(abs_top_builddir)/ssl/.libs/libssl.a \
+	$(abs_top_builddir)/crypto/.libs/libcrypto.a \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) $(am__append_1)
 am_ssl_versions_OBJECTS = ssl_versions.$(OBJEXT)
 ssl_versions_OBJECTS = $(am_ssl_versions_OBJECTS)
 ssl_versions_LDADD = $(LDADD)
@@ -840,11 +849,11 @@ am__depfiles_remade = ./$(DEPDIR)/aeadtest.Po ./$(DEPDIR)/aes_wrap.Po \
 	./$(DEPDIR)/rsa_test.Po ./$(DEPDIR)/servertest.Po \
 	./$(DEPDIR)/sha1test.Po ./$(DEPDIR)/sha256test.Po \
 	./$(DEPDIR)/sha512test.Po ./$(DEPDIR)/sm3test.Po \
-	./$(DEPDIR)/sm4test.Po ./$(DEPDIR)/ssl_versions.Po \
-	./$(DEPDIR)/ssltest.Po ./$(DEPDIR)/timingsafe.Po \
-	./$(DEPDIR)/tls_ext_alpn.Po ./$(DEPDIR)/tls_prf.Po \
-	./$(DEPDIR)/tlsexttest.Po ./$(DEPDIR)/tlstest.Po \
-	./$(DEPDIR)/utf8test.Po \
+	./$(DEPDIR)/sm4test.Po ./$(DEPDIR)/ssl_methods.Po \
+	./$(DEPDIR)/ssl_versions.Po ./$(DEPDIR)/ssltest.Po \
+	./$(DEPDIR)/timingsafe.Po ./$(DEPDIR)/tls_ext_alpn.Po \
+	./$(DEPDIR)/tls_prf.Po ./$(DEPDIR)/tlsexttest.Po \
+	./$(DEPDIR)/tlstest.Po ./$(DEPDIR)/utf8test.Po \
 	./$(DEPDIR)/valid_handshakes_terminate.Po \
 	./$(DEPDIR)/verifytest.Po ./$(DEPDIR)/x25519test.Po \
 	./$(DEPDIR)/x509_info.Po ./$(DEPDIR)/x509attribute.Po \
@@ -896,7 +905,8 @@ SOURCES = $(aeadtest_SOURCES) $(aes_wrap_SOURCES) \
 	$(rfc5280time_SOURCES) $(rmdtest_SOURCES) $(rsa_test_SOURCES) \
 	$(servertest_SOURCES) $(sha1test_SOURCES) \
 	$(sha256test_SOURCES) $(sha512test_SOURCES) $(sm3test_SOURCES) \
-	$(sm4test_SOURCES) $(ssl_versions_SOURCES) $(ssltest_SOURCES) \
+	$(sm4test_SOURCES) $(ssl_methods_SOURCES) \
+	$(ssl_versions_SOURCES) $(ssltest_SOURCES) \
 	$(timingsafe_SOURCES) $(tls_ext_alpn_SOURCES) \
 	$(tls_prf_SOURCES) $(tlsexttest_SOURCES) $(tlstest_SOURCES) \
 	$(utf8test_SOURCES) $(valid_handshakes_terminate_SOURCES) \
@@ -931,7 +941,8 @@ DIST_SOURCES = $(aeadtest_SOURCES) $(aes_wrap_SOURCES) \
 	$(rfc5280time_SOURCES) $(rmdtest_SOURCES) $(rsa_test_SOURCES) \
 	$(servertest_SOURCES) $(sha1test_SOURCES) \
 	$(sha256test_SOURCES) $(sha512test_SOURCES) $(sm3test_SOURCES) \
-	$(sm4test_SOURCES) $(ssl_versions_SOURCES) $(ssltest_SOURCES) \
+	$(sm4test_SOURCES) $(ssl_methods_SOURCES) \
+	$(ssl_versions_SOURCES) $(ssltest_SOURCES) \
 	$(timingsafe_SOURCES) $(tls_ext_alpn_SOURCES) \
 	$(tls_prf_SOURCES) $(tlsexttest_SOURCES) \
 	$(am__tlstest_SOURCES_DIST) $(utf8test_SOURCES) \
@@ -1392,6 +1403,7 @@ sha256test_SOURCES = sha256test.c
 sha512test_SOURCES = sha512test.c
 sm3test_SOURCES = sm3test.c
 sm4test_SOURCES = sm4test.c
+ssl_methods_SOURCES = ssl_methods.c
 ssl_versions_SOURCES = ssl_versions.c
 ssltest_SOURCES = ssltest.c
 timingsafe_SOURCES = timingsafe.c
@@ -1726,6 +1738,10 @@ sm4test$(EXEEXT): $(sm4test_OBJECTS) $(sm4test_DEPENDENCIES) $(EXTRA_sm4test_DEP
 	@rm -f sm4test$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(sm4test_OBJECTS) $(sm4test_LDADD) $(LIBS)
 
+ssl_methods$(EXEEXT): $(ssl_methods_OBJECTS) $(ssl_methods_DEPENDENCIES) $(EXTRA_ssl_methods_DEPENDENCIES) 
+	@rm -f ssl_methods$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(ssl_methods_OBJECTS) $(ssl_methods_LDADD) $(LIBS)
+
 ssl_versions$(EXEEXT): $(ssl_versions_OBJECTS) $(ssl_versions_DEPENDENCIES) $(EXTRA_ssl_versions_DEPENDENCIES) 
 	@rm -f ssl_versions$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(ssl_versions_OBJECTS) $(ssl_versions_LDADD) $(LIBS)
@@ -1858,6 +1874,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha512test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm3test.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm4test.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssl_methods.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssl_versions.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssltest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timingsafe.Po@am__quote@ # am--include-marker
@@ -2615,6 +2632,13 @@ sm4test.log: sm4test$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssl_methods.log: ssl_methods$(EXEEXT)
+	@p='ssl_methods$(EXEEXT)'; \
+	b='ssl_methods'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 ssl_versions.log: ssl_versions$(EXEEXT)
 	@p='ssl_versions$(EXEEXT)'; \
 	b='ssl_versions'; \
@@ -2897,6 +2921,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sha512test.Po
 	-rm -f ./$(DEPDIR)/sm3test.Po
 	-rm -f ./$(DEPDIR)/sm4test.Po
+	-rm -f ./$(DEPDIR)/ssl_methods.Po
 	-rm -f ./$(DEPDIR)/ssl_versions.Po
 	-rm -f ./$(DEPDIR)/ssltest.Po
 	-rm -f ./$(DEPDIR)/timingsafe.Po
@@ -3025,6 +3050,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sha512test.Po
 	-rm -f ./$(DEPDIR)/sm3test.Po
 	-rm -f ./$(DEPDIR)/sm4test.Po
+	-rm -f ./$(DEPDIR)/ssl_methods.Po
 	-rm -f ./$(DEPDIR)/ssl_versions.Po
 	-rm -f ./$(DEPDIR)/ssltest.Po
 	-rm -f ./$(DEPDIR)/timingsafe.Po

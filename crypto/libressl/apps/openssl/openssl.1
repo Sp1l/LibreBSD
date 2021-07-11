@@ -1,4 +1,4 @@
-.\" $OpenBSD: openssl.1,v 1.125 2020/07/14 09:52:46 inoguchi Exp $
+.\" $OpenBSD: openssl.1,v 1.129 2021/03/17 18:08:32 jsing Exp $
 .\" ====================================================================
 .\" Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
 .\"
@@ -110,7 +110,7 @@
 .\" copied and put under another distribution licence
 .\" [including the GNU Public Licence.]
 .\"
-.Dd $Mdocdate: July 14 2020 $
+.Dd $Mdocdate: March 17 2021 $
 .Dt OPENSSL 1
 .Os
 .Sh NAME
@@ -1121,7 +1121,7 @@ commands.
 .It Fl binary
 Normally the input message is converted to "canonical" format which is
 effectively using CR/LF as end of line, as required by the S/MIME specification.
-When this option is present no translation occurs.
+When this option is present, no translation occurs.
 This is useful when handling binary data which may not be in MIME format.
 .It Fl CAfile Ar file
 A file containing trusted CA certificates, used with
@@ -1971,7 +1971,7 @@ Encrypt the private key with DES, triple DES, or
 any other cipher supported by
 .Nm openssl .
 A pass phrase is prompted for.
-If none of these options is specified the key is written in plain text.
+If none of these options are specified, the key is written in plain text.
 This means that using the
 .Nm ec
 utility to read in an encrypted key with no
@@ -1982,7 +1982,7 @@ These options can only be used with PEM format output files.
 .It Fl in Ar file
 The input file to read a key from,
 or standard input if not specified.
-If the key is encrypted a pass phrase will be prompted for.
+If the key is encrypted, a pass phrase will be prompted for.
 .It Fl inform Cm der | pem
 The input format.
 .It Fl noout
@@ -2491,7 +2491,10 @@ A
 .Sq \&.
 represents each number which has passed an initial sieve test;
 .Sq +
-means a number has passed a single round of the Miller-Rabin primality test.
+means a number has passed a single round of the Miller-Rabin primality test;
+.Sq *
+means the number has failed primality testing
+and needs to be generated afresh.
 A newline means that the number has passed all the prime tests
 (the actual number depends on the key size).
 .Pp
@@ -3356,7 +3359,7 @@ is acceptable, such as
 .It Fl in Ar file
 The input file to read from,
 or standard input if not specified.
-If the key is encrypted a pass phrase will be prompted for.
+If the key is encrypted, a pass phrase will be prompted for.
 .It Fl inform Cm der | pem
 The input format.
 .It Fl noout
@@ -3529,8 +3532,8 @@ For pss
 mode only this option specifies the salt length.
 Two special values are supported:
 -1 sets the salt length to the digest length.
-When signing -2 sets the salt length to the maximum permissible value.
-When verifying -2 causes the salt length to be automatically determined
+When signing, -2 sets the salt length to the maximum permissible value.
+When verifying, -2 causes the salt length to be automatically determined
 based on the PSS block structure.
 .El
 .Pp
@@ -4277,7 +4280,9 @@ Verify the input data and output the recovered data.
 .Op Fl crl_check_all
 .Op Fl crlf
 .Op Fl debug
+.Op Fl dtls
 .Op Fl dtls1
+.Op Fl dtls1_2
 .Op Fl extended_crl
 .Op Fl groups Ar list
 .Op Fl host Ar host
@@ -4421,8 +4426,12 @@ Translate a line feed from the terminal into CR+LF,
 as required by some servers.
 .It Fl debug
 Print extensive debugging information, including a hex dump of all traffic.
+.It Fl dtls
+Permit any version of DTLS.
 .It Fl dtls1
 Permit only DTLS1.0.
+.It Fl dtls1_2
+Permit only DTLS1.2.
 .It Fl groups Ar list
 Set the supported elliptic curve groups to the colon separated
 .Ar list
@@ -4585,7 +4594,9 @@ will be used.
 .Op Fl dkey Ar file
 .Op Fl dkeyform Cm der | pem
 .Op Fl dpass Ar arg
+.Op Fl dtls
 .Op Fl dtls1
+.Op Fl dtls1_2
 .Op Fl groups Ar list
 .Op Fl HTTP
 .Op Fl id_prefix Ar arg
@@ -4751,8 +4762,12 @@ load the parameters from the server certificate file.
 If this fails, a static set of parameters hard coded into the
 .Nm s_server
 program will be used.
+.It Fl dtls
+Permit any version of DTLS.
 .It Fl dtls1
 Permit only DTLS1.0.
+.It Fl dtls1_2
+Permit only DTLS1.2.
 .It Fl groups Ar list
 Set the supported elliptic curve groups to the colon separated
 .Ar list
@@ -5202,7 +5217,7 @@ Normally, the input message is converted to
 .Qq canonical
 format which uses CR/LF as end of line,
 as required by the S/MIME specification.
-When this option is present no translation occurs.
+When this option is present, no translation occurs.
 This is useful when handling binary data which may not be in MIME format.
 .It Fl CAfile Ar file
 A
@@ -5601,7 +5616,7 @@ The policy that the client expects the TSA to use for creating the
 time stamp token.
 Either dotted OID notation or OID names defined
 in the config file can be used.
-If no policy is requested the TSA uses its own default policy.
+If no policy is requested, the TSA uses its own default policy.
 .It Fl text
 Output in human-readable text format instead of DER.
 .El
@@ -5859,6 +5874,7 @@ The default is no.
 .Op Fl inhibit_any
 .Op Fl inhibit_map
 .Op Fl issuer_checks
+.Op Fl legacy_verify
 .Op Fl policy_check
 .Op Fl purpose Ar purpose
 .Op Fl trusted Ar file
@@ -5907,7 +5923,7 @@ The
 should contain one or more CRLs in PEM format.
 .It Fl crl_check
 Check end entity certificate validity by attempting to look up a valid CRL.
-If a valid CRL cannot be found an error occurs.
+If a valid CRL cannot be found, an error occurs.
 .It Fl crl_check_all
 Check the validity of all certificates in the chain by attempting
 to look up valid CRLs.
@@ -5931,6 +5947,8 @@ showing why each candidate issuer certificate was rejected.
 The presence of rejection messages
 does not itself imply that anything is wrong:
 during the normal verify process several rejections may take place.
+.It Fl legacy_verify
+Use the legacy X.509 certificate chain verification code.
 .It Fl policy_check
 Enable certificate policy processing.
 .It Fl purpose Ar purpose
@@ -6560,7 +6578,7 @@ Print the full certificate in text form.
 A trusted certificate is a certificate which has several
 additional pieces of information attached to it such as the permitted
 and prohibited uses of the certificate and an alias.
-When a certificate is being verified at least one certificate must be trusted.
+When a certificate is being verified, at least one certificate must be trusted.
 By default, a trusted certificate must be stored locally and be a root CA.
 The following are x509 trust settings options:
 .Bl -tag -width "XXXX"

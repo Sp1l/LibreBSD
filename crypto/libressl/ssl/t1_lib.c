@@ -1,4 +1,4 @@
-/* $OpenBSD: t1_lib.c,v 1.176 2020/09/12 17:25:11 tb Exp $ */
+/* $OpenBSD: t1_lib.c,v 1.179 2020/12/05 19:33:38 tb Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -125,19 +125,6 @@
 static int tls_decrypt_ticket(SSL *s, CBS *ticket, int *alert,
     SSL_SESSION **psess);
 
-SSL3_ENC_METHOD TLSv1_enc_data = {
-	.enc_flags = 0,
-};
-
-SSL3_ENC_METHOD TLSv1_1_enc_data = {
-	.enc_flags = SSL_ENC_FLAG_EXPLICIT_IV,
-};
-
-SSL3_ENC_METHOD TLSv1_2_enc_data = {
-	.enc_flags = SSL_ENC_FLAG_EXPLICIT_IV|SSL_ENC_FLAG_SIGALGS|
-	    SSL_ENC_FLAG_SHA256_PRF|SSL_ENC_FLAG_TLS1_2_CIPHERS,
-};
-
 int
 tls1_new(SSL *s)
 {
@@ -164,7 +151,7 @@ tls1_clear(SSL *s)
 	s->version = s->method->internal->version;
 }
 
-static int nid_list[] = {
+static const int nid_list[] = {
 	NID_sect163k1,		/* sect163k1 (1) */
 	NID_sect163r1,		/* sect163r1 (2) */
 	NID_sect163r2,		/* sect163r2 (3) */

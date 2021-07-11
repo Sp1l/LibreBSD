@@ -1,4 +1,4 @@
-/* $OpenBSD: asn1_lib.c,v 1.44.10.1 2020/12/08 15:08:47 tb Exp $ */
+/* $OpenBSD: asn1_lib.c,v 1.45 2020/12/08 15:06:42 tb Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *

@@ -5,7 +5,7 @@ SHLIBDIR?=      /lib
 .include <bsd.own.mk>
 
 LIB=            crypto
-SHLIB_MAJOR=    46
+SHLIB_MAJOR=    47
 
 NO_LINT=
 
@@ -249,6 +249,7 @@ SRCS+= ui_err.c ui_lib.c ui_openssl.c ui_util.c
 SRCS+= wp_dgst.c
 
 # x509/
+SRCS+= x509_addr.c x509_asid.c
 SRCS+= x509_def.c x509_d2.c x509_r2x.c x509_cmp.c
 SRCS+= x509_obj.c x509_req.c x509spki.c x509_vfy.c
 SRCS+= x509_set.c x509cset.c x509rset.c x509_err.c

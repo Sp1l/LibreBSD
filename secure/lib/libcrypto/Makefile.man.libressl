@@ -382,6 +382,7 @@ MAN=	\
 	lh_new.3 \
 	lh_stats.3 \
 	openssl.cnf.5 \
+	x509_verify.3 \
 	x509v3.cnf.5
 
 MLINKS+= \

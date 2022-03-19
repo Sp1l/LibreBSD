@@ -15,7 +15,7 @@ ATF_TESTS_C+=	kern_copyin
 ATF_TESTS_C+=	kern_descrip_test
 ATF_TESTS_C+=	fdgrowtable_test
 ATF_TESTS_C+=	kill_zombie
-.if ${MK_OPENSSL} != "no"
+.if ${MK_OPENSSL} != "no" && ${MK_LIBRESSL} == "no"
 ATF_TESTS_C+=	ktls_test
 .endif
 ATF_TESTS_C+=	module_test

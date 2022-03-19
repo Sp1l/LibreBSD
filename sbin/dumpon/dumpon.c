@@ -267,7 +267,7 @@ genkey(const char *pubkeyfile, struct diocskerneldump_arg *kdap)
 	 * of 'd' (i.e., the supplied key is a public key rather than a full
 	 * keypair).
 	 */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	if (RSA_security_bits(pubkey) < 112)
 #else
 	if (RSA_size(pubkey) * 8 < 2048)

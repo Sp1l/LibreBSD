@@ -1,11 +1,11 @@
-# $OpenBSD: Makefile,v 1.67 2015/10/19 16:32:37 beck Exp $
+# $OpenBSD: Makefile,v 1.72 2022/03/23 15:13:31 tb Exp $
 
 SHLIBDIR?=      /lib
 
 .include <bsd.own.mk>
 
 LIB=            crypto
-SHLIB_MAJOR=    47
+SHLIB_MAJOR=    49
 
 NO_LINT=
 
@@ -14,16 +14,61 @@ NO_LINT=
 .endif
 .include "Makefile.inc.libressl"
 
+# From libressl-portable
+CFLAGS+= -DHAVE_SYSLOG
+
+# LibreSSL FreeBSD compat
 # compat/
-SRCS+=	freezero.c getentropy_freebsd.c recallocarray.c
-SRCS+=	syslog_r.c timingsafe_bcmp.c timingsafe_memcmp.c
+SRCS+=	arc4random.c arc4random_uniform.c
+SRCS+=	freezero.c recallocarray.c syslog_r.c
+# compat/syslog_r.c
+CFLAGS+=	-DHAVE_SYSLOG
 
 ### This is copied straight from the original Makefile
 ### src/lib/libcrypto/crypto/Makefile
 
+CFLAGS+= -Wall -Wundef
+##LibreBSD: OpenBSD COMPILER_VERSION -> FreeBSD COMPILER_TYPE
+.if ${COMPILER_TYPE:L} == "clang"
+CFLAGS+= -Werror
+.endif
+CFLAGS+= -DLIBRESSL_INTERNAL -DLIBRESSL_CRYPTO_INTERNAL
+
+##LibreBSD: OpenBSD NOPIC -> FreeBSD NO_PIC
+.if !defined(NO_PIC)
+CFLAGS+= -DDSO_DLFCN -DHAVE_DLFCN_H -DHAVE_FUNOPEN
+.endif
+
+# Hardware engines
+CFLAGS+= -DOPENSSL_NO_HW_PADLOCK # XXX enable this?
+
+CFLAGS+= -I${LCRYPTO_SRC}
+##LibreBSD: FreeBSD MACHINE_CPU = amd64 sse2 sse mmx
+# CFLAGS+= -I${LCRYPTO_SRC}/arch/${MACHINE_CPU}
+CFLAGS+= -I${LCRYPTO_SRC}/asn1
+CFLAGS+= -I${LCRYPTO_SRC}/bio
+CFLAGS+= -I${LCRYPTO_SRC}/bn
+CFLAGS+= -I${LCRYPTO_SRC}/bytestring
+CFLAGS+= -I${LCRYPTO_SRC}/dh
+CFLAGS+= -I${LCRYPTO_SRC}/dsa
+CFLAGS+= -I${LCRYPTO_SRC}/ec
+CFLAGS+= -I${LCRYPTO_SRC}/ecdh
+CFLAGS+= -I${LCRYPTO_SRC}/ecdsa
+CFLAGS+= -I${LCRYPTO_SRC}/evp
+CFLAGS+= -I${LCRYPTO_SRC}/hmac
+CFLAGS+= -I${LCRYPTO_SRC}/modes
+CFLAGS+= -I${LCRYPTO_SRC}/ocsp
+CFLAGS+= -I${LCRYPTO_SRC}/rsa
+CFLAGS+= -I${LCRYPTO_SRC}/x509
+CFLAGS+= -I${LCRYPTO_SRC}/modes
+
+##LibreBSD: TODO
+##LibreBSD: VERSION_SCRIPT=	Symbols.map
+##LibreBSD: SYMBOL_LIST=	${.CURDIR}/Symbols.list
+
 # crypto/
 SRCS+= cryptlib.c malloc-wrapper.c mem_dbg.c cversion.c ex_data.c cpt_err.c
-SRCS+= o_time.c o_str.c o_init.c
+SRCS+= o_time.c o_str.c o_init.c o_fips.c
 SRCS+= mem_clr.c crypto_init.c crypto_lock.c
 
 # aes/
@@ -31,20 +76,18 @@ SRCS+= aes_misc.c aes_ecb.c aes_cfb.c aes_ofb.c
 SRCS+= aes_ctr.c aes_ige.c aes_wrap.c
 
 # asn1/
-SRCS+= a_object.c a_bitstr.c a_time.c a_int.c a_octet.c
-SRCS+= a_print.c a_type.c a_dup.c a_d2i_fp.c a_i2d_fp.c
-SRCS+= a_enum.c a_utf8.c a_sign.c a_digest.c a_verify.c a_mbstr.c a_strex.c
+SRCS+= a_object.c a_bitstr.c a_time.c a_int.c a_octet.c a_pkey.c a_pubkey.c
+SRCS+= a_print.c a_type.c a_string.c
+SRCS+= a_enum.c a_utf8.c a_mbstr.c a_strex.c
 SRCS+= x_algor.c x_val.c x_pubkey.c x_sig.c x_req.c x_attrib.c x_bignum.c
 SRCS+= x_long.c x_name.c x_x509.c x_x509a.c x_crl.c x_info.c x_spki.c nsseq.c
-SRCS+= x_nx509.c d2i_pu.c d2i_pr.c i2d_pu.c i2d_pr.c
-SRCS+= t_req.c t_x509.c t_x509a.c t_crl.c t_pkey.c t_spki.c t_bitst.c
+SRCS+= t_req.c t_x509.c t_x509a.c t_crl.c t_pkey.c t_spki.c
 SRCS+= tasn_new.c tasn_fre.c tasn_enc.c tasn_dec.c tasn_utl.c tasn_typ.c
 SRCS+= tasn_prn.c ameth_lib.c
-SRCS+= f_int.c f_string.c n_pkey.c
-SRCS+= f_enum.c x_pkey.c a_bool.c x_exten.c bio_asn1.c bio_ndef.c asn_mime.c
-SRCS+= asn1_gen.c asn1_par.c asn1_lib.c asn1_err.c a_strnid.c
-SRCS+= evp_asn1.c asn_pack.c p5_pbe.c p5_pbev2.c p8_pkey.c asn_moid.c
-SRCS+= a_time_tm.c
+SRCS+= x_pkey.c x_exten.c bio_asn1.c bio_ndef.c asn_mime.c
+SRCS+= asn1_gen.c asn1_par.c asn1_old_lib.c asn1_err.c a_strnid.c
+SRCS+= p5_pbe.c p5_pbev2.c p8_pkey.c asn_moid.c
+SRCS+= a_time_tm.c asn1_item.c asn1_old.c asn1_types.c asn1_lib.c
 
 # bf/
 SRCS+= bf_skey.c bf_ecb.c bf_cfb64.c bf_ofb64.c
@@ -66,6 +109,9 @@ SRCS+= bn_depr.c bn_const.c bn_x931p.c
 
 # buffer/
 SRCS+= buffer.c buf_err.c buf_str.c
+
+# bytestring/
+SRCS+= bs_ber.c bs_cbb.c bs_cbs.c
 
 # camellia/
 SRCS+= cmll_cfb.c cmll_ctr.c cmll_ecb.c cmll_ofb.c
@@ -90,6 +136,10 @@ SRCS+= comp_lib.c comp_err.c c_rle.c c_zlib.c
 # conf/
 SRCS+= conf_err.c conf_lib.c conf_api.c conf_def.c conf_mod.c
 SRCS+= conf_mall.c conf_sap.c
+
+# ct/
+SRCS += ct_b64.c ct_err.c ct_log.c ct_oct.c ct_policy.c
+SRCS += ct_prn.c ct_sct.c ct_sct_ctx.c ct_vfy.c ct_x509v3.c
 
 # curve25519/
 SRCS+= curve25519.c curve25519-generic.c
@@ -118,6 +168,7 @@ SRCS+= dso_openssl.c
 SRCS+= ec_lib.c ecp_smpl.c ecp_mont.c ecp_nist.c ec_cvt.c ec_mult.c
 SRCS+= ec_err.c ec_curve.c ec_check.c ec_print.c ec_asn1.c ec_key.c
 SRCS+= ec2_smpl.c ec2_mult.c ec_ameth.c ec_pmeth.c ec_kmeth.c eck_prn.c
+##LibreBSD: Not in -portable
 #SRCS+= ecp_nistp224.c ecp_nistp256.c ecp_nistp521.c ecp_nistputil.c
 SRCS+= ecp_oct.c ec2_oct.c ec_oct.c
 
@@ -144,8 +195,7 @@ SRCS+= encode.c digest.c evp_enc.c evp_key.c
 SRCS+= e_des.c e_bf.c e_idea.c e_des3.c e_camellia.c
 SRCS+= e_rc4.c e_aes.c names.c
 SRCS+= e_xcbc_d.c e_rc2.c e_cast.c
-SRCS+= m_null.c m_md4.c m_md5.c m_sha1.c m_sm3.c m_wp.c
-SRCS+= m_dss.c m_dss1.c m_ripemd.c m_ecdsa.c
+SRCS+= m_null.c m_md4.c m_md5.c m_ripemd.c m_sha1.c m_sm3.c m_wp.c
 SRCS+= p_open.c p_seal.c p_sign.c p_verify.c p_lib.c p_enc.c p_dec.c
 SRCS+= bio_md.c bio_b64.c bio_enc.c evp_err.c e_null.c
 SRCS+= c_all.c evp_lib.c
@@ -192,7 +242,7 @@ SRCS+= ocsp_asn.c ocsp_ext.c ocsp_ht.c ocsp_lib.c ocsp_cl.c
 SRCS+= ocsp_srv.c ocsp_prn.c ocsp_vfy.c ocsp_err.c
 
 # pem/
-SRCS+= pem_sign.c pem_seal.c pem_info.c pem_lib.c pem_all.c pem_err.c
+SRCS+= pem_sign.c pem_info.c pem_lib.c pem_all.c pem_err.c
 SRCS+= pem_x509.c pem_xaux.c pem_oth.c pem_pk8.c pem_pkey.c pvkfmt.c
 
 # pkcs12/
@@ -265,16 +315,17 @@ SRCS+= pcy_cache.c pcy_node.c pcy_data.c pcy_map.c pcy_tree.c pcy_lib.c
 
 ### end of OpenBSD src/lib/libcrypto/crypto/Makefile import
 
+### Loosely based on OpenBSD lib/libcrypto/arch/amd64/Makefile.inc
 .if ${MACHINE_CPUARCH} == "amd64"
 # aes
-CFLAGS+= -DAES_ASM -DBSAES_ASM -DVPAES_ASM
+CFLAGS+= -DAES_ASM -DBSAES_ASMdd -DVPAES_ASM
 SRCS+= aes-elf-x86_64.S bsaes-elf-x86_64.S vpaes-elf-x86_64.S aesni-elf-x86_64.S \
-	aesni-sha1-elf-x86_64.S bn_asm.c
+	aesni-sha1-elf-x86_64.S
 # bf
 SRCS+= bf_enc.c
 # bn
 CFLAGS+= -DOPENSSL_IA32_SSE2 -DRSA_ASM -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_MONT5 -DOPENSSL_BN_ASM_GF2m
-SRCS+= modexp512-elf-x86_64.S mont-elf-x86_64.S mont5-elf-x86_64.S gf2m-elf-x86_64.S 
+SRCS+= modexp512-elf-x86_64.S mont-elf-x86_64.S mont5-elf-x86_64.S gf2m-elf-x86_64.S
 # camellia
 SRCS+= cmll_misc.c cmll-elf-x86_64.S
 # des
@@ -293,8 +344,8 @@ CFLAGS+= -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM
 SRCS+= sha1-elf-x86_64.S sha256-elf-x86_64.S sha512-elf-x86_64.S
 # whrlpool
 FLAGS+= -DWHIRLPOOL_ASM
-SRCS+= wp-elf-x86_64.S wp-macosx-x86_64.S 
-# 
+SRCS+= wp-elf-x86_64.S
+#
 CFLAGS+= -DOPENSSL_CPUID_OBJ
 SRCS+= cpuid-elf-x86_64.S
 .else
@@ -351,6 +402,7 @@ CFLAGS+= -DHAVE_EXPLICIT_BZERO=1 -DHAVE_REALLOCARRAY=1
 .include <bsd.lib.mk>
 
 .PATH:	${LCRYPTO_SRC} \
+	${LCRYPTO_SRC}/compat \
 	${LCRYPTO_SRC}/aes \
 	${LCRYPTO_SRC}/asn1 \
 	${LCRYPTO_SRC}/bf \
@@ -358,14 +410,15 @@ CFLAGS+= -DHAVE_EXPLICIT_BZERO=1 -DHAVE_REALLOCARRAY=1
 	${LCRYPTO_SRC}/bn \
 	${LCRYPTO_SRC}/bn/asm \
 	${LCRYPTO_SRC}/buffer \
+	${LCRYPTO_SRC}/bytestring \
 	${LCRYPTO_SRC}/camellia \
 	${LCRYPTO_SRC}/cast \
 	${LCRYPTO_SRC}/chacha \
 	${LCRYPTO_SRC}/cmac \
 	${LCRYPTO_SRC}/cms \
 	${LCRYPTO_SRC}/comp \
-	${LCRYPTO_SRC}/compat \
 	${LCRYPTO_SRC}/conf \
+	${LCRYPTO_SRC}/ct \
 	${LCRYPTO_SRC}/curve25519 \
 	${LCRYPTO_SRC}/des \
 	${LCRYPTO_SRC}/dh \
@@ -407,7 +460,32 @@ CFLAGS+= -DHAVE_EXPLICIT_BZERO=1 -DHAVE_REALLOCARRAY=1
 	${LCRYPTO_SRC}/ui \
 	${LCRYPTO_SRC}/whrlpool \
 	${LCRYPTO_SRC}/x509 \
-	${LCRYPTO_SRC}/x509v3 \
 	${LIBRESSL_SRC}/include/openssl \
-	${LIBRESSL_SRC}/include/compat \
 	${LIBRESSL_SRC}/man
+
+##LibreBSD: OpenBSD HDRS is FreeBSD INCS
+INCS=	aes.h asn1.h asn1t.h \
+	blowfish.h bio.h bn.h buffer.h \
+	camellia.h cast.h chacha.h cmac.h cms.h comp.h conf.h conf_api.h crypto.h ct.h cterr.h curve25519.h \
+	des.h dh.h dsa.h dso.h ec.h ecdh.h ecdsa.h engine.h err.h evp.h gost.h \
+	hkdf.h hmac.h \
+	idea.h \
+	lhash.h \
+	md4.h md5.h modes.h \
+	objects.h ocsp.h opensslfeatures.h opensslv.h ossl_typ.h \
+	pem.h pem2.h pkcs12.h pkcs7.h poly1305.h \
+	rand.h rc2.h rc4.h ripemd.h rsa.h \
+	sha.h sm3.h sm4.h safestack.h stack.h \
+	ts.h txt_db.h \
+	ui.h ui_compat.h \
+	whrlpool.h \
+	x509.h x509_vfy.h x509_verify.h x509v3.h
+
+##LibreBSD: Add bn_asm.c compat
+SRCS+=	bn_asm.c
+##LibreBSD: Add generated headers
+INCS+=	obj_mac.h opensslconf.h
+
+INCSDIR=	${INCLUDEDIR}/openssl
+
+.include <bsd.lib.mk>

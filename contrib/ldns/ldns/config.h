@@ -85,9 +85,6 @@
 
 /* Define to 1 if you have the `EVP_dss1' function. */
 /* #undef HAVE_EVP_DSS1 */
-#ifdef WITH_LIBRESSL
-#define HAVE_EVP_DSS1 1
-#endif
 
 /* Define to 1 if you have the `EVP_MD_CTX_new' function. */
 #define HAVE_EVP_MD_CTX_NEW 1

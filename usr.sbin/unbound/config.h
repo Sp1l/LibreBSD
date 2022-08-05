@@ -249,10 +249,8 @@
 #define HAVE_EVP_DIGESTVERIFY 1
 #endif
 
-#ifdef WITH_LIBRESSL
 /* Define to 1 if you have the `EVP_dss1' function. */
-#define HAVE_EVP_DSS1 1
-#endif
+/* #undef HAVE_EVP_DSS1 1 */
 
 /* Define to 1 if you have the `EVP_EncryptInit_ex' function. */
 #define HAVE_EVP_ENCRYPTINIT_EX 1

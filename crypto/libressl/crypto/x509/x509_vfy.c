@@ -1,4 +1,4 @@
-/* $OpenBSD: x509_vfy.c,v 1.89.2.1 2021/11/24 09:28:56 tb Exp $ */
+/* $OpenBSD: x509_vfy.c,v 1.101 2022/01/22 00:36:46 inoguchi Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -75,8 +75,6 @@
 #include <openssl/x509v3.h>
 #include "asn1_locl.h"
 #include "vpm_int.h"
-#include "x509_internal.h"
-#include "x509_lcl.h"
 #include "x509_internal.h"
 
 /* CRL score values */
@@ -264,7 +262,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 		goto end;
 	}
 	X509_up_ref(ctx->cert);
-	ctx->last_untrusted = 1;
+	ctx->num_untrusted = 1;
 
 	/* We use a temporary STACK so we can chop and hack at it */
 	if (ctx->untrusted != NULL &&
@@ -338,7 +336,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 				}
 				X509_up_ref(xtmp);
 				(void)sk_X509_delete_ptr(sktmp, xtmp);
-				ctx->last_untrusted++;
+				ctx->num_untrusted++;
 				x = xtmp;
 				num++;
 				/*
@@ -396,7 +394,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 					X509_free(x);
 					x = xtmp;
 					(void)sk_X509_set(ctx->chain, i - 1, x);
-					ctx->last_untrusted = 0;
+					ctx->num_untrusted = 0;
 				}
 			} else {
 				/*
@@ -404,7 +402,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 				 * certificate for later use
 				 */
 				chain_ss = sk_X509_pop(ctx->chain);
-				ctx->last_untrusted--;
+				ctx->num_untrusted--;
 				num--;
 				j--;
 				x = sk_X509_value(ctx->chain, num - 1);
@@ -478,7 +476,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 						X509_free(xtmp);
 						num--;
 					}
-					ctx->last_untrusted = sk_X509_num(ctx->chain);
+					ctx->num_untrusted = sk_X509_num(ctx->chain);
 					retry = 1;
 					break;
 				}
@@ -493,7 +491,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 	 */
 	if (trust != X509_TRUST_TRUSTED && !bad_chain) {
 		if ((chain_ss == NULL) || !ctx->check_issued(ctx, x, chain_ss)) {
-			if (ctx->last_untrusted >= num)
+			if (ctx->num_untrusted >= num)
 				ctx->error = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY;
 			else
 				ctx->error = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT;
@@ -506,7 +504,7 @@ X509_verify_cert_legacy_build_chain(X509_STORE_CTX *ctx, int *bad, int *out_ok)
 				goto end;
 			}
 			num++;
-			ctx->last_untrusted = num;
+			ctx->num_untrusted = num;
 			ctx->current_cert = chain_ss;
 			ctx->error = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN;
 			chain_ss = NULL;
@@ -548,6 +546,16 @@ X509_verify_cert_legacy(X509_STORE_CTX *ctx)
 	ok = check_name_constraints(ctx);
 	if (!ok)
 		goto end;
+
+#ifndef OPENSSL_NO_RFC3779
+	ok = X509v3_asid_validate_path(ctx);
+	if (!ok)
+		goto end;
+
+	ok = X509v3_addr_validate_path(ctx);
+	if (!ok)
+		goto end;
+#endif
 
 	ok = check_id(ctx);
 	if (!ok)
@@ -741,7 +749,7 @@ x509_vfy_check_chain_extensions(X509_STORE_CTX *ctx)
 	}
 
 	/* Check all untrusted certificates */
-	for (i = 0; i < ctx->last_untrusted; i++) {
+	for (i = 0; i < ctx->num_untrusted; i++) {
 		int ret;
 		x = sk_X509_value(ctx->chain, i);
 		if (!(ctx->param->flags & X509_V_FLAG_IGNORE_CRITICAL) &&
@@ -898,8 +906,8 @@ lookup_cert_match(X509_STORE_CTX *ctx, X509 *x)
 X509 *
 x509_vfy_lookup_cert_match(X509_STORE_CTX *ctx, X509 *x)
 {
-	if (ctx->lookup_certs == NULL || ctx->ctx == NULL ||
-	    ctx->ctx->objs == NULL)
+	if (ctx->lookup_certs == NULL || ctx->store == NULL ||
+	    ctx->store->objs == NULL)
 		return NULL;
 	return lookup_cert_match(ctx, x);
 }
@@ -914,7 +922,7 @@ check_trust(X509_STORE_CTX *ctx)
 
 	cb = ctx->verify_cb;
 	/* Check all trusted certificates in chain */
-	for (i = ctx->last_untrusted; i < sk_X509_num(ctx->chain); i++) {
+	for (i = ctx->num_untrusted; i < sk_X509_num(ctx->chain); i++) {
 		x = sk_X509_value(ctx->chain, i);
 		ok = X509_check_trust(x, ctx->param->trust, 0);
 
@@ -940,14 +948,14 @@ check_trust(X509_STORE_CTX *ctx)
 	 */
 	if (ctx->param->flags & X509_V_FLAG_PARTIAL_CHAIN) {
 		X509 *mx;
-		if (ctx->last_untrusted < (int)sk_X509_num(ctx->chain))
+		if (ctx->num_untrusted < (int)sk_X509_num(ctx->chain))
 			return X509_TRUST_TRUSTED;
 		x = sk_X509_value(ctx->chain, 0);
 		mx = lookup_cert_match(ctx, x);
 		if (mx) {
 			(void)sk_X509_set(ctx->chain, 0, mx);
 			X509_free(x);
-			ctx->last_untrusted = 0;
+			ctx->num_untrusted = 0;
 			return X509_TRUST_TRUSTED;
 		}
 	}
@@ -1072,17 +1080,17 @@ err:
 static int
 check_crl_time(X509_STORE_CTX *ctx, X509_CRL *crl, int notify)
 {
-	time_t *ptime = NULL;
+	time_t *ptime;
 	int i;
-
-	if (ctx->param->flags & X509_V_FLAG_NO_CHECK_TIME)
-		return (1);
-
-	if (ctx->param->flags & X509_V_FLAG_USE_CHECK_TIME)
-		ptime = &ctx->param->check_time;
 
 	if (notify)
 		ctx->current_crl = crl;
+	if (ctx->param->flags & X509_V_FLAG_USE_CHECK_TIME)
+		ptime = &ctx->param->check_time;
+	else if (ctx->param->flags & X509_V_FLAG_NO_CHECK_TIME)
+		return (1);
+	else
+		ptime = NULL;
 
 	i = X509_cmp_time(X509_CRL_get_lastUpdate(crl), ptime);
 	if (i == 0) {
@@ -1407,7 +1415,7 @@ check_crl_path(X509_STORE_CTX *ctx, X509 *x)
 	/* Don't allow recursive CRL path validation */
 	if (ctx->parent)
 		return 0;
-	if (!X509_STORE_CTX_init(&crl_ctx, ctx->ctx, x, ctx->untrusted)) {
+	if (!X509_STORE_CTX_init(&crl_ctx, ctx->store, x, ctx->untrusted)) {
 		ret = -1;
 		goto err;
 	}
@@ -1835,6 +1843,18 @@ verify_cb_cert(X509_STORE_CTX *ctx, X509 *x, int depth, int err)
 	return ctx->verify_cb(0, ctx);
 }
 
+
+/* Mimic OpenSSL '0 for failure' ick */
+static int
+time_t_bogocmp(time_t a, time_t b)
+{
+	if (a == -1 || b == -1)
+		return 0;
+	if (a <= b)
+		return -1;
+	return 1;
+}
+
 /*
  * Check certificate validity times.
  *
@@ -1846,17 +1866,21 @@ verify_cb_cert(X509_STORE_CTX *ctx, X509 *x, int depth, int err)
 int
 x509_check_cert_time(X509_STORE_CTX *ctx, X509 *x, int depth)
 {
-	time_t *ptime;
+	time_t ptime;
 	int i;
 
 	if (ctx->param->flags & X509_V_FLAG_USE_CHECK_TIME)
-		ptime = &ctx->param->check_time;
+		ptime = ctx->param->check_time;
 	else if (ctx->param->flags & X509_V_FLAG_NO_CHECK_TIME)
 		return 1;
 	else
-		ptime = NULL;
+		ptime = time(NULL);
 
-	i = X509_cmp_time(X509_get_notBefore(x), ptime);
+	if (x->ex_flags & EXFLAG_SET)
+		i = time_t_bogocmp(x->not_before, ptime);
+	else
+		i = X509_cmp_time(X509_get_notBefore(x), &ptime);
+
 	if (i >= 0 && depth < 0)
 		return 0;
 	if (i == 0 && !verify_cb_cert(ctx, x, depth,
@@ -1866,7 +1890,11 @@ x509_check_cert_time(X509_STORE_CTX *ctx, X509 *x, int depth)
 	    X509_V_ERR_CERT_NOT_YET_VALID))
 		return 0;
 
-	i = X509_cmp_time_internal(X509_get_notAfter(x), ptime, 1);
+	if (x->ex_flags & EXFLAG_SET)
+		i = time_t_bogocmp(x->not_after, ptime);
+	else
+		i = X509_cmp_time_internal(X509_get_notAfter(x), &ptime, 1);
+
 	if (i <= 0 && depth < 0)
 		return 0;
 	if (i == 0 && !verify_cb_cert(ctx, x, depth,
@@ -1875,6 +1903,7 @@ x509_check_cert_time(X509_STORE_CTX *ctx, X509 *x, int depth)
 	if (i < 0 && !verify_cb_cert(ctx, x, depth,
 	    X509_V_ERR_CERT_HAS_EXPIRED))
 		return 0;
+
 	return 1;
 }
 
@@ -1990,30 +2019,23 @@ X509_cmp_current_time(const ASN1_TIME *ctm)
  * 0 on error.
  */
 static int
-X509_cmp_time_internal(const ASN1_TIME *ctm, time_t *cmp_time, int clamp_notafter)
+X509_cmp_time_internal(const ASN1_TIME *ctm, time_t *cmp_time, int is_notafter)
 {
-	time_t compare;
-	struct tm tm1, tm2;
-	int ret = 0;
+	time_t compare, cert_time;
 
 	if (cmp_time == NULL)
 		compare = time(NULL);
 	else
 		compare = *cmp_time;
 
-	memset(&tm1, 0, sizeof(tm1));
+	if ((cert_time = x509_verify_asn1_time_to_time_t(ctm, is_notafter)) ==
+	    -1)
+		return 0; /* invalid time */
 
-	if (!x509_verify_asn1_time_to_tm(ctm, &tm1, clamp_notafter))
-		goto out; /* invalid time */
+	if (cert_time <= compare)
+		return -1; /* 0 is used for error, so map same to less than */
 
-	if (gmtime_r(&compare, &tm2) == NULL)
-		goto out;
-
-	ret = ASN1_time_tm_cmp(&tm1, &tm2);
-	if (ret == 0)
-		ret = -1; /* 0 is used for error, so map same to less than */
- out:
-	return (ret);
+	return 1;
 }
 
 int
@@ -2057,17 +2079,15 @@ X509_get_pubkey_parameters(EVP_PKEY *pkey, STACK_OF(X509) *chain)
 		return 1;
 
 	for (i = 0; i < sk_X509_num(chain); i++) {
-		ktmp = X509_get_pubkey(sk_X509_value(chain, i));
+		ktmp = X509_get0_pubkey(sk_X509_value(chain, i));
 		if (ktmp == NULL) {
 			X509error(X509_R_UNABLE_TO_GET_CERTS_PUBLIC_KEY);
 			return 0;
 		}
 		if (!EVP_PKEY_missing_parameters(ktmp))
 			break;
-		else {
-			EVP_PKEY_free(ktmp);
+		else
 			ktmp = NULL;
-		}
 	}
 	if (ktmp == NULL) {
 		X509error(X509_R_UNABLE_TO_FIND_PARAMETERS_IN_CHAIN);
@@ -2076,14 +2096,15 @@ X509_get_pubkey_parameters(EVP_PKEY *pkey, STACK_OF(X509) *chain)
 
 	/* first, populate the other certs */
 	for (j = i - 1; j >= 0; j--) {
-		ktmp2 = X509_get_pubkey(sk_X509_value(chain, j));
-		EVP_PKEY_copy_parameters(ktmp2, ktmp);
-		EVP_PKEY_free(ktmp2);
+		if ((ktmp2 = X509_get0_pubkey(sk_X509_value(chain, j))) == NULL)
+			return 0;
+		if (!EVP_PKEY_copy_parameters(ktmp2, ktmp))
+			return 0;
 	}
 
 	if (pkey != NULL)
-		EVP_PKEY_copy_parameters(pkey, ktmp);
-	EVP_PKEY_free(ktmp);
+		if (!EVP_PKEY_copy_parameters(pkey, ktmp))
+			return 0;
 	return 1;
 }
 
@@ -2127,10 +2148,22 @@ X509_STORE_CTX_get_error_depth(X509_STORE_CTX *ctx)
 	return ctx->error_depth;
 }
 
+void
+X509_STORE_CTX_set_error_depth(X509_STORE_CTX *ctx, int depth)
+{
+	ctx->error_depth = depth;
+}
+
 X509 *
 X509_STORE_CTX_get_current_cert(X509_STORE_CTX *ctx)
 {
 	return ctx->current_cert;
+}
+
+void
+X509_STORE_CTX_set_current_cert(X509_STORE_CTX *ctx, X509 *x)
+{
+	ctx->current_cert = x;
 }
 
 STACK_OF(X509) *
@@ -2182,7 +2215,7 @@ X509_STORE_CTX_get0_parent_ctx(X509_STORE_CTX *ctx)
 X509_STORE *
 X509_STORE_CTX_get0_store(X509_STORE_CTX *xs)
 {
-	return xs->ctx;
+	return xs->store;
 }
 
 void
@@ -2322,7 +2355,7 @@ X509_STORE_CTX_init(X509_STORE_CTX *ctx, X509_STORE *store, X509 *x509,
 	 * may fail should go last to make sure 'ctx' is as consistent as
 	 * possible even on early exits.
 	 */
-	ctx->ctx = store;
+	ctx->store = store;
 	ctx->cert = x509;
 	ctx->untrusted = chain;
 
@@ -2472,11 +2505,29 @@ X509_STORE_CTX_set_time(X509_STORE_CTX *ctx, unsigned long flags, time_t t)
 	X509_VERIFY_PARAM_set_time(ctx->param, t);
 }
 
+int
+(*X509_STORE_CTX_get_verify_cb(X509_STORE_CTX *ctx))(int, X509_STORE_CTX *)
+{
+	return ctx->verify_cb;
+}
+
 void
 X509_STORE_CTX_set_verify_cb(X509_STORE_CTX *ctx,
     int (*verify_cb)(int, X509_STORE_CTX *))
 {
 	ctx->verify_cb = verify_cb;
+}
+
+int
+(*X509_STORE_CTX_get_verify(X509_STORE_CTX *ctx))(X509_STORE_CTX *)
+{
+	return ctx->verify;
+}
+
+void
+X509_STORE_CTX_set_verify(X509_STORE_CTX *ctx, int (*verify)(X509_STORE_CTX *))
+{
+	ctx->verify = verify;
 }
 
 X509 *
@@ -2497,6 +2548,13 @@ X509_STORE_CTX_set0_untrusted(X509_STORE_CTX *ctx, STACK_OF(X509) *sk)
 	ctx->untrusted = sk;
 }
 
+void
+X509_STORE_CTX_set0_verified_chain(X509_STORE_CTX *ctx, STACK_OF(X509) *sk)
+{
+	sk_X509_pop_free(ctx->chain, X509_free);
+	ctx->chain = sk;
+}
+
 X509_POLICY_TREE *
 X509_STORE_CTX_get0_policy_tree(X509_STORE_CTX *ctx)
 {
@@ -2507,6 +2565,12 @@ int
 X509_STORE_CTX_get_explicit_policy(X509_STORE_CTX *ctx)
 {
 	return ctx->explicit_policy;
+}
+
+int
+X509_STORE_CTX_get_num_untrusted(X509_STORE_CTX *ctx)
+{
+	return ctx->num_untrusted;
 }
 
 int

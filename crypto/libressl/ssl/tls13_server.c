@@ -1,4 +1,4 @@
-/* $OpenBSD: tls13_server.c,v 1.84 2021/07/01 17:53:39 jsing Exp $ */
+/* $OpenBSD: tls13_server.c,v 1.96 2022/02/03 16:33:12 jsing Exp $ */
 /*
  * Copyright (c) 2019, 2020 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2020 Bob Beck <beck@openbsd.org>
@@ -164,6 +164,7 @@ tls13_client_hello_process(struct tls13_ctx *ctx, CBS *cbs)
 		return tls13_use_legacy_server(ctx);
 	}
 	ctx->hs->negotiated_tls_version = TLS1_3_VERSION;
+	ctx->hs->peer_legacy_version = legacy_version;
 
 	/* Ensure we send subsequent alerts with the correct record version. */
 	tls13_record_layer_set_legacy_version(ctx->rl, TLS1_2_VERSION);
@@ -294,7 +295,7 @@ tls13_client_hello_recv(struct tls13_ctx *ctx, CBS *cbs)
 	 * has been enabled. This would probably mean using either an
 	 * INITIAL | WITHOUT_HRR state, or another intermediate state.
 	 */
-	if (ctx->hs->tls13.key_share != NULL)
+	if (ctx->hs->key_share != NULL)
 		ctx->handshake_stage.hs_type |= NEGOTIATED | WITHOUT_HRR;
 
 	/* XXX - check this is the correct point */
@@ -359,8 +360,8 @@ tls13_server_engage_record_protection(struct tls13_ctx *ctx)
 	SSL *s = ctx->ssl;
 	int ret = 0;
 
-	if (!tls13_key_share_derive(ctx->hs->tls13.key_share,
-	    &shared_key, &shared_key_len))
+	if (!tls_key_share_derive(ctx->hs->key_share, &shared_key,
+	    &shared_key_len))
 		goto err;
 
 	s->session->cipher = ctx->hs->cipher;
@@ -424,7 +425,7 @@ tls13_server_hello_retry_request_send(struct tls13_ctx *ctx, CBB *cbb)
 	if (!tls13_synthetic_handshake_message(ctx))
 		return 0;
 
-	if (ctx->hs->tls13.key_share != NULL)
+	if (ctx->hs->key_share != NULL)
 		return 0;
 	if ((nid = tls1_get_shared_curve(ctx->ssl)) == NID_undef)
 		return 0;
@@ -484,9 +485,9 @@ tls13_servername_process(struct tls13_ctx *ctx)
 int
 tls13_server_hello_send(struct tls13_ctx *ctx, CBB *cbb)
 {
-	if (ctx->hs->tls13.key_share == NULL)
+	if (ctx->hs->key_share == NULL)
 		return 0;
-	if (!tls13_key_share_generate(ctx->hs->tls13.key_share))
+	if (!tls_key_share_generate(ctx->hs->key_share))
 		return 0;
 	if (!tls13_servername_process(ctx))
 		return 0;
@@ -544,7 +545,7 @@ tls13_server_certificate_request_send(struct tls13_ctx *ctx, CBB *cbb)
 }
 
 static int
-tls13_server_check_certificate(struct tls13_ctx *ctx, CERT_PKEY *cpk,
+tls13_server_check_certificate(struct tls13_ctx *ctx, SSL_CERT_PKEY *cpk,
     int *ok, const struct ssl_sigalg **out_sigalg)
 {
 	const struct ssl_sigalg *sigalg;
@@ -556,15 +557,11 @@ tls13_server_check_certificate(struct tls13_ctx *ctx, CERT_PKEY *cpk,
 	if (cpk->x509 == NULL || cpk->privatekey == NULL)
 		goto done;
 
-	if (!X509_check_purpose(cpk->x509, -1, 0))
-		return 0;
-
 	/*
 	 * The digitalSignature bit MUST be set if the Key Usage extension is
 	 * present as per RFC 8446 section 4.4.2.2.
 	 */
-	if ((cpk->x509->ex_flags & EXFLAG_KUSAGE) &&
-	    !(cpk->x509->ex_kusage & X509v3_KU_DIGITAL_SIGNATURE))
+	if (!(X509_get_key_usage(cpk->x509) & X509v3_KU_DIGITAL_SIGNATURE))
 		goto done;
 
 	if ((sigalg = ssl_sigalg_select(s, cpk->privatekey)) == NULL)
@@ -578,12 +575,12 @@ tls13_server_check_certificate(struct tls13_ctx *ctx, CERT_PKEY *cpk,
 }
 
 static int
-tls13_server_select_certificate(struct tls13_ctx *ctx, CERT_PKEY **out_cpk,
+tls13_server_select_certificate(struct tls13_ctx *ctx, SSL_CERT_PKEY **out_cpk,
     const struct ssl_sigalg **out_sigalg)
 {
 	SSL *s = ctx->ssl;
 	const struct ssl_sigalg *sigalg;
-	CERT_PKEY *cpk;
+	SSL_CERT_PKEY *cpk;
 	int cert_ok;
 
 	*out_cpk = NULL;
@@ -619,7 +616,7 @@ tls13_server_certificate_send(struct tls13_ctx *ctx, CBB *cbb)
 	const struct ssl_sigalg *sigalg;
 	X509_STORE_CTX *xsc = NULL;
 	STACK_OF(X509) *chain;
-	CERT_PKEY *cpk;
+	SSL_CERT_PKEY *cpk;
 	X509 *cert;
 	int i, ret = 0;
 
@@ -649,7 +646,7 @@ tls13_server_certificate_send(struct tls13_ctx *ctx, CBB *cbb)
 		    X509_V_FLAG_LEGACY_VERIFY);
 		X509_verify_cert(xsc);
 		ERR_clear_error();
-		chain = xsc->chain;
+		chain = X509_STORE_CTX_get0_chain(xsc);
 	}
 
 	if (!CBB_add_u8_length_prefixed(cbb, &cert_request_context))
@@ -700,7 +697,7 @@ tls13_server_certificate_verify_send(struct tls13_ctx *ctx, CBB *cbb)
 	EVP_MD_CTX *mdctx = NULL;
 	EVP_PKEY_CTX *pctx;
 	EVP_PKEY *pkey;
-	const CERT_PKEY *cpk;
+	const SSL_CERT_PKEY *cpk;
 	CBB sig_cbb;
 	int ret = 0;
 
@@ -860,7 +857,7 @@ tls13_client_certificate_recv(struct tls13_ctx *ctx, CBS *cbs)
 	X509 *cert = NULL;
 	EVP_PKEY *pkey;
 	const uint8_t *p;
-	int cert_idx;
+	int cert_type;
 	int ret = 0;
 
 	if (!CBS_get_u8_length_prefixed(cbs, &cert_request_context))
@@ -911,32 +908,29 @@ tls13_client_certificate_recv(struct tls13_ctx *ctx, CBS *cbs)
 	}
 	ERR_clear_error();
 
-	cert = sk_X509_value(certs, 0);
-	X509_up_ref(cert);
+	/*
+	 * Achtung! Due to API inconsistency, a client includes the peer's leaf
+	 * certificate in the stored certificate chain, while a server does not.
+	 */
+	cert = sk_X509_shift(certs);
 
 	if ((pkey = X509_get0_pubkey(cert)) == NULL)
 		goto err;
 	if (EVP_PKEY_missing_parameters(pkey))
 		goto err;
-	if ((cert_idx = ssl_cert_type(cert, pkey)) < 0)
+	if ((cert_type = ssl_cert_type(pkey)) < 0)
 		goto err;
 
-	ssl_sess_cert_free(SSI(s)->sess_cert);
-	if ((SSI(s)->sess_cert = ssl_sess_cert_new()) == NULL)
-		goto err;
-
-	SSI(s)->sess_cert->cert_chain = certs;
-	certs = NULL;
-
 	X509_up_ref(cert);
-	SSI(s)->sess_cert->peer_pkeys[cert_idx].x509 = cert;
-	SSI(s)->sess_cert->peer_key = &(SSI(s)->sess_cert->peer_pkeys[cert_idx]);
+	X509_free(s->session->peer_cert);
+	s->session->peer_cert = cert;
+	s->session->peer_cert_type = cert_type;
 
-	X509_free(s->session->peer);
-
-	X509_up_ref(cert);
-	s->session->peer = cert;
 	s->session->verify_result = s->verify_result;
+
+	sk_X509_pop_free(s->session->cert_chain, X509_free);
+	s->session->cert_chain = certs;
+	certs = NULL;
 
 	ctx->handshake_stage.hs_type |= WITH_CCV;
 	ret = 1;
@@ -986,7 +980,7 @@ tls13_client_certificate_verify_recv(struct tls13_ctx *ctx, CBS *cbs)
 	if (!CBB_finish(&cbb, &sig_content, &sig_content_len))
 		goto err;
 
-	if ((cert = ctx->ssl->session->peer) == NULL)
+	if ((cert = ctx->ssl->session->peer_cert) == NULL)
 		goto err;
 	if ((pkey = X509_get0_pubkey(cert)) == NULL)
 		goto err;

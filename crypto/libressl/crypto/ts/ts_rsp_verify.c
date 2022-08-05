@@ -1,4 +1,4 @@
-/* $OpenBSD: ts_rsp_verify.c,v 1.21 2021/07/02 11:15:08 schwarze Exp $ */
+/* $OpenBSD: ts_rsp_verify.c,v 1.24 2021/12/12 21:30:14 tb Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2002.
  */
@@ -63,6 +63,9 @@
 #include <openssl/objects.h>
 #include <openssl/pkcs7.h>
 #include <openssl/ts.h>
+
+#include "evp_locl.h"
+#include "x509_lcl.h"
 
 /* Private function declarations. */
 
@@ -323,8 +326,12 @@ static int
 TS_find_cert(STACK_OF(ESS_CERT_ID) *cert_ids, X509 *cert)
 {
 	int i;
+	unsigned char cert_hash[TS_HASH_LEN];
 
 	if (!cert_ids || !cert)
+		return -1;
+
+	if (!X509_digest(cert, TS_HASH_EVP, cert_hash, NULL))
 		return -1;
 
 	/* Recompute SHA1 hash of certificate if necessary (side effect). */
@@ -335,9 +342,8 @@ TS_find_cert(STACK_OF(ESS_CERT_ID) *cert_ids, X509 *cert)
 		ESS_CERT_ID *cid = sk_ESS_CERT_ID_value(cert_ids, i);
 
 		/* Check the SHA-1 hash first. */
-		if (cid->hash->length == sizeof(cert->sha1_hash) &&
-		    !memcmp(cid->hash->data, cert->sha1_hash,
-			sizeof(cert->sha1_hash))) {
+		if (cid->hash->length == TS_HASH_LEN && !memcmp(cid->hash->data,
+		    cert_hash, TS_HASH_LEN)) {
 			/* Check the issuer/serial as well if specified. */
 			ESS_ISSUER_SERIAL *is = cid->issuer_serial;
 			if (!is || !TS_issuer_serial_cmp(is, cert->cert_info))

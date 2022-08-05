@@ -1,4 +1,4 @@
-/* $OpenBSD: ssl_asn1.c,v 1.59 2021/05/16 14:10:43 jsing Exp $ */
+/* $OpenBSD: ssl_asn1.c,v 1.61 2022/01/11 18:39:28 jsing Exp $ */
 /*
  * Copyright (c) 2016 Joel Sing <jsing@openbsd.org>
  *
@@ -113,8 +113,8 @@ SSL_SESSION_encode(SSL_SESSION *s, unsigned char **out, size_t *out_len,
 	}
 
 	/* Peer certificate [3]. */
-	if (s->peer != NULL) {
-		if ((len = i2d_X509(s->peer, &peer_cert_bytes)) <= 0)
+	if (s->peer_cert != NULL) {
+		if ((len = i2d_X509(s->peer_cert, &peer_cert_bytes)) <= 0)
 			goto err;
 		if (!CBB_add_asn1(&session, &peer_cert, SSLASN1_PEER_CERT_TAG))
 			goto err;
@@ -332,8 +332,8 @@ d2i_SSL_SESSION(SSL_SESSION **a, const unsigned char **pp, long length)
 		s->timeout = (long)timeout;
 
 	/* Peer certificate [3]. */
-	X509_free(s->peer);
-	s->peer = NULL;
+	X509_free(s->peer_cert);
+	s->peer_cert = NULL;
 	if (!CBS_get_optional_asn1(&session, &peer_cert, &present,
 	    SSLASN1_PEER_CERT_TAG))
 		goto err;
@@ -342,7 +342,7 @@ d2i_SSL_SESSION(SSL_SESSION **a, const unsigned char **pp, long length)
 		if (data_len > LONG_MAX)
 			goto err;
 		peer_cert_bytes = CBS_data(&peer_cert);
-		if (d2i_X509(&s->peer, &peer_cert_bytes,
+		if (d2i_X509(&s->peer_cert, &peer_cert_bytes,
 		    (long)data_len) == NULL)
 			goto err;
 	}
@@ -388,16 +388,13 @@ d2i_SSL_SESSION(SSL_SESSION **a, const unsigned char **pp, long length)
 
 	/* Ticket lifetime [9]. */
 	s->tlsext_tick_lifetime_hint = 0;
-	/* XXX - tlsext_ticklen is not yet set... */
-	if (s->tlsext_ticklen > 0 && s->session_id_length > 0)
-		s->tlsext_tick_lifetime_hint = -1;
 	if (!CBS_get_optional_asn1_uint64(&session, &lifetime,
 	    SSLASN1_LIFETIME_TAG, 0))
 		goto err;
-	if (lifetime > LONG_MAX)
+	if (lifetime > UINT32_MAX)
 		goto err;
 	if (lifetime > 0)
-		s->tlsext_tick_lifetime_hint = (long)lifetime;
+		s->tlsext_tick_lifetime_hint = (uint32_t)lifetime;
 
 	/* Ticket [10]. */
 	free(s->tlsext_tick);

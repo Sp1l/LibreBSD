@@ -1,4 +1,4 @@
-/* $OpenBSD: ssl_rsa.c,v 1.34 2021/06/11 11:13:53 jsing Exp $ */
+/* $OpenBSD: ssl_rsa.c,v 1.39 2022/02/03 16:33:12 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -66,11 +66,11 @@
 
 #include "ssl_locl.h"
 
-static int ssl_set_cert(CERT *c, X509 *x509);
-static int ssl_set_pkey(CERT *c, EVP_PKEY *pkey);
-static int use_certificate_chain_bio(BIO *in, CERT *cert,
+static int ssl_set_cert(SSL_CERT *c, X509 *x509);
+static int ssl_set_pkey(SSL_CERT *c, EVP_PKEY *pkey);
+static int use_certificate_chain_bio(BIO *in, SSL_CERT *cert,
     pem_password_cb *passwd_cb, void *passwd_arg);
-static int use_certificate_chain_file(const char *file, CERT *cert,
+static int use_certificate_chain_file(const char *file, SSL_CERT *cert,
     pem_password_cb *passwd_cb, void *passwd_arg);
 
 int
@@ -91,7 +91,7 @@ SSL_use_certificate_file(SSL *ssl, const char *file, int type)
 	int ret = 0;
 	X509 *x = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerror(ssl, ERR_R_BUF_LIB);
 		goto end;
@@ -167,11 +167,11 @@ SSL_use_RSAPrivateKey(SSL *ssl, RSA *rsa)
 }
 
 static int
-ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
+ssl_set_pkey(SSL_CERT *c, EVP_PKEY *pkey)
 {
 	int i;
 
-	i = ssl_cert_type(NULL, pkey);
+	i = ssl_cert_type(pkey);
 	if (i < 0) {
 		SSLerrorx(SSL_R_UNKNOWN_CERTIFICATE_TYPE);
 		return (0);
@@ -188,19 +188,18 @@ ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 		 * Don't check the public/private key, this is mostly
 		 * for smart cards.
 		 */
-		if ((pkey->type == EVP_PKEY_RSA) &&
-			(RSA_flags(pkey->pkey.rsa) & RSA_METHOD_FLAG_NO_CHECK))
-;
-		else
-		if (!X509_check_private_key(c->pkeys[i].x509, pkey)) {
-			X509_free(c->pkeys[i].x509);
-			c->pkeys[i].x509 = NULL;
-			return 0;
+		if (EVP_PKEY_id(pkey) != EVP_PKEY_RSA ||
+		    !(RSA_flags(EVP_PKEY_get0_RSA(pkey)) & RSA_METHOD_FLAG_NO_CHECK)) {
+			if (!X509_check_private_key(c->pkeys[i].x509, pkey)) {
+				X509_free(c->pkeys[i].x509);
+				c->pkeys[i].x509 = NULL;
+				return 0;
+			}
 		}
 	}
 
 	EVP_PKEY_free(c->pkeys[i].privatekey);
-	CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
+	EVP_PKEY_up_ref(pkey);
 	c->pkeys[i].privatekey = pkey;
 	c->key = &(c->pkeys[i]);
 
@@ -215,7 +214,7 @@ SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type)
 	BIO *in;
 	RSA *rsa = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerror(ssl, ERR_R_BUF_LIB);
 		goto end;
@@ -284,7 +283,7 @@ SSL_use_PrivateKey_file(SSL *ssl, const char *file, int type)
 	BIO *in;
 	EVP_PKEY *pkey = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerror(ssl, ERR_R_BUF_LIB);
 		goto end;
@@ -344,7 +343,7 @@ SSL_CTX_use_certificate(SSL_CTX *ctx, X509 *x)
 }
 
 static int
-ssl_set_cert(CERT *c, X509 *x)
+ssl_set_cert(SSL_CERT *c, X509 *x)
 {
 	EVP_PKEY *pkey;
 	int i;
@@ -355,7 +354,7 @@ ssl_set_cert(CERT *c, X509 *x)
 		return (0);
 	}
 
-	i = ssl_cert_type(x, pkey);
+	i = ssl_cert_type(pkey);
 	if (i < 0) {
 		SSLerrorx(SSL_R_UNKNOWN_CERTIFICATE_TYPE);
 		EVP_PKEY_free(pkey);
@@ -363,36 +362,35 @@ ssl_set_cert(CERT *c, X509 *x)
 	}
 
 	if (c->pkeys[i].privatekey != NULL) {
-		EVP_PKEY_copy_parameters(pkey, c->pkeys[i].privatekey);
+		EVP_PKEY *priv_key = c->pkeys[i].privatekey;
+
+		EVP_PKEY_copy_parameters(pkey, priv_key);
 		ERR_clear_error();
 
 		/*
 		 * Don't check the public/private key, this is mostly
 		 * for smart cards.
 		 */
-		if ((c->pkeys[i].privatekey->type == EVP_PKEY_RSA) &&
-			(RSA_flags(c->pkeys[i].privatekey->pkey.rsa) &
-		RSA_METHOD_FLAG_NO_CHECK))
-;
-		else
-		if (!X509_check_private_key(x, c->pkeys[i].privatekey)) {
-			/*
-			 * don't fail for a cert/key mismatch, just free
-			 * current private key (when switching to a different
-			 * cert & key, first this function should be used,
-			 * then ssl_set_pkey
-			 */
-			EVP_PKEY_free(c->pkeys[i].privatekey);
-			c->pkeys[i].privatekey = NULL;
-			/* clear error queue */
-			ERR_clear_error();
+		if (EVP_PKEY_id(priv_key) != EVP_PKEY_RSA ||
+		    !(RSA_flags(EVP_PKEY_get0_RSA(priv_key)) & RSA_METHOD_FLAG_NO_CHECK)) {
+			if (!X509_check_private_key(x, priv_key)) {
+				/*
+				 * don't fail for a cert/key mismatch, just free
+				 * current private key (when switching to a
+				 * different cert & key, first this function
+				 * should be used, then ssl_set_pkey.
+				 */
+				EVP_PKEY_free(c->pkeys[i].privatekey);
+				c->pkeys[i].privatekey = NULL;
+				ERR_clear_error();
+			}
 		}
 	}
 
 	EVP_PKEY_free(pkey);
 
 	X509_free(c->pkeys[i].x509);
-	CRYPTO_add(&x->references, 1, CRYPTO_LOCK_X509);
+	X509_up_ref(x);
 	c->pkeys[i].x509 = x;
 	c->key = &(c->pkeys[i]);
 
@@ -408,7 +406,7 @@ SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
 	int ret = 0;
 	X509 *x = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerrorx(ERR_R_BUF_LIB);
 		goto end;
@@ -489,7 +487,7 @@ SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	BIO *in;
 	RSA *rsa = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerrorx(ERR_R_BUF_LIB);
 		goto end;
@@ -555,7 +553,7 @@ SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	BIO *in;
 	EVP_PKEY *pkey = NULL;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerrorx(ERR_R_BUF_LIB);
 		goto end;
@@ -612,7 +610,7 @@ SSL_CTX_use_PrivateKey_ASN1(int type, SSL_CTX *ctx, const unsigned char *d,
  * sent to the peer in the Certificate message.
  */
 static int
-use_certificate_chain_bio(BIO *in, CERT *cert, pem_password_cb *passwd_cb,
+use_certificate_chain_bio(BIO *in, SSL_CERT *cert, pem_password_cb *passwd_cb,
     void *passwd_arg)
 {
 	X509 *ca, *x = NULL;
@@ -655,13 +653,13 @@ use_certificate_chain_bio(BIO *in, CERT *cert, pem_password_cb *passwd_cb,
 }
 
 int
-use_certificate_chain_file(const char *file, CERT *cert,
+use_certificate_chain_file(const char *file, SSL_CERT *cert,
     pem_password_cb *passwd_cb, void *passwd_arg)
 {
 	BIO *in;
 	int ret = 0;
 
-	in = BIO_new(BIO_s_file_internal());
+	in = BIO_new(BIO_s_file());
 	if (in == NULL) {
 		SSLerrorx(ERR_R_BUF_LIB);
 		goto end;

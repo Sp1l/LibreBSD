@@ -92,7 +92,6 @@ host_triplet = @host@
 @ENABLE_LIBTLS_ONLY_FALSE@bin_PROGRAMS = ocspcheck$(EXEEXT)
 @ENABLE_LIBTLS_ONLY_TRUE@noinst_PROGRAMS = ocspcheck$(EXEEXT)
 @HAVE_MEMMEM_FALSE@am__append_1 = compat/memmem.c
-@HAVE_STRTONUM_FALSE@am__append_2 = compat/strtonum.c
 subdir = apps/ocspcheck
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_add_fortify_source.m4 \
@@ -113,13 +112,11 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
-am__ocspcheck_SOURCES_DIST = http.c ocspcheck.c compat/memmem.c \
-	compat/strtonum.c
+am__ocspcheck_SOURCES_DIST = http.c ocspcheck.c compat/memmem.c
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_MEMMEM_FALSE@am__objects_1 = compat/memmem.$(OBJEXT)
-@HAVE_STRTONUM_FALSE@am__objects_2 = compat/strtonum.$(OBJEXT)
 am_ocspcheck_OBJECTS = http.$(OBJEXT) ocspcheck.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2)
+	$(am__objects_1)
 ocspcheck_OBJECTS = $(am_ocspcheck_OBJECTS)
 am__DEPENDENCIES_1 =
 ocspcheck_DEPENDENCIES = $(abs_top_builddir)/crypto/libcrypto.la \
@@ -146,7 +143,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/http.Po ./$(DEPDIR)/ocspcheck.Po \
-	compat/$(DEPDIR)/memmem.Po compat/$(DEPDIR)/strtonum.Po
+	compat/$(DEPDIR)/memmem.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -360,7 +357,7 @@ ocspcheck_LDADD = $(abs_top_builddir)/crypto/libcrypto.la \
 	$(abs_top_builddir)/ssl/libssl.la \
 	$(abs_top_builddir)/tls/libtls.la $(PLATFORM_LDADD) \
 	$(PROG_LDADD)
-ocspcheck_SOURCES = http.c ocspcheck.c $(am__append_1) $(am__append_2)
+ocspcheck_SOURCES = http.c ocspcheck.c $(am__append_1)
 noinst_HEADERS = http.h
 all: all-am
 
@@ -462,8 +459,6 @@ compat/$(DEPDIR)/$(am__dirstamp):
 	@: > compat/$(DEPDIR)/$(am__dirstamp)
 compat/memmem.$(OBJEXT): compat/$(am__dirstamp) \
 	compat/$(DEPDIR)/$(am__dirstamp)
-compat/strtonum.$(OBJEXT): compat/$(am__dirstamp) \
-	compat/$(DEPDIR)/$(am__dirstamp)
 
 ocspcheck$(EXEEXT): $(ocspcheck_OBJECTS) $(ocspcheck_DEPENDENCIES) $(EXTRA_ocspcheck_DEPENDENCIES) 
 	@rm -f ocspcheck$(EXEEXT)
@@ -479,7 +474,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ocspcheck.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@compat/$(DEPDIR)/memmem.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@compat/$(DEPDIR)/strtonum.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -693,7 +687,6 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/http.Po
 	-rm -f ./$(DEPDIR)/ocspcheck.Po
 	-rm -f compat/$(DEPDIR)/memmem.Po
-	-rm -f compat/$(DEPDIR)/strtonum.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -742,7 +735,6 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/http.Po
 	-rm -f ./$(DEPDIR)/ocspcheck.Po
 	-rm -f compat/$(DEPDIR)/memmem.Po
-	-rm -f compat/$(DEPDIR)/strtonum.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

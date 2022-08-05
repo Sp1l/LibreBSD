@@ -1,4 +1,4 @@
-/* $OpenBSD: t1_lib.c,v 1.182 2021/07/01 17:53:39 jsing Exp $ */
+/* $OpenBSD: t1_lib.c,v 1.186 2022/01/24 13:47:53 tb Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -329,8 +329,8 @@ tls1_get_formatlist(SSL *s, int client_formats, const uint8_t **pformats,
     size_t *pformatslen)
 {
 	if (client_formats != 0) {
-		*pformats = SSI(s)->tlsext_ecpointformatlist;
-		*pformatslen = SSI(s)->tlsext_ecpointformatlist_length;
+		*pformats = s->session->tlsext_ecpointformatlist;
+		*pformatslen = s->session->tlsext_ecpointformatlist_length;
 		return;
 	}
 
@@ -352,8 +352,8 @@ tls1_get_group_list(SSL *s, int client_groups, const uint16_t **pgroups,
     size_t *pgroupslen)
 {
 	if (client_groups != 0) {
-		*pgroups = SSI(s)->tlsext_supportedgroups;
-		*pgroupslen = SSI(s)->tlsext_supportedgroups_length;
+		*pgroups = s->session->tlsext_supportedgroups;
+		*pgroupslen = s->session->tlsext_supportedgroups_length;
 		return;
 	}
 
@@ -569,19 +569,19 @@ tls1_check_ec_key(SSL *s, const uint16_t *curve_id, const uint8_t *comp_id)
 int
 tls1_check_ec_server_key(SSL *s)
 {
-	CERT_PKEY *cpk = s->cert->pkeys + SSL_PKEY_ECC;
+	SSL_CERT_PKEY *cpk = s->cert->pkeys + SSL_PKEY_ECC;
 	uint16_t curve_id;
 	uint8_t comp_id;
+	EC_KEY *eckey;
 	EVP_PKEY *pkey;
-	int rv;
 
 	if (cpk->x509 == NULL || cpk->privatekey == NULL)
 		return (0);
-	if ((pkey = X509_get_pubkey(cpk->x509)) == NULL)
+	if ((pkey = X509_get0_pubkey(cpk->x509)) == NULL)
 		return (0);
-	rv = tls1_set_ec_id(&curve_id, &comp_id, pkey->pkey.ec);
-	EVP_PKEY_free(pkey);
-	if (rv != 1)
+	if ((eckey = EVP_PKEY_get0_EC_KEY(pkey)) == NULL)
+		return (0);
+	if (!tls1_set_ec_id(&curve_id, &comp_id, eckey))
 		return (0);
 
 	return tls1_check_ec_key(s, &curve_id, &comp_id);
@@ -634,7 +634,7 @@ ssl_check_clienthello_tlsext_late(SSL *s)
 	if ((s->tlsext_status_type != -1) &&
 	    s->ctx && s->ctx->internal->tlsext_status_cb) {
 		int r;
-		CERT_PKEY *certpkey;
+		SSL_CERT_PKEY *certpkey;
 		certpkey = ssl_get_server_send_pkey(s);
 		/* If no certificate can't return certificate status */
 		if (certpkey == NULL) {

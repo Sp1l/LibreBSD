@@ -1,4 +1,4 @@
-/* $OpenBSD: ec_asn1.c,v 1.34 2021/08/31 20:14:40 tb Exp $ */
+/* $OpenBSD: ec_asn1.c,v 1.36 2022/03/31 13:00:58 tb Exp $ */
 /*
  * Written by Nils Larsch for the OpenSSL project.
  */
@@ -295,7 +295,6 @@ static const ASN1_ADB_TABLE X9_62_CHARACTERISTIC_TWO_adbtbl[] = {
 static const ASN1_ADB X9_62_CHARACTERISTIC_TWO_adb = {
 	.flags = 0,
 	.offset = offsetof(X9_62_CHARACTERISTIC_TWO, type),
-	.app_items = 0,
 	.tbl = X9_62_CHARACTERISTIC_TWO_adbtbl,
 	.tblcount = sizeof(X9_62_CHARACTERISTIC_TWO_adbtbl) / sizeof(ASN1_ADB_TABLE),
 	.default_tt = &char_two_def_tt,
@@ -387,7 +386,6 @@ static const ASN1_ADB_TABLE X9_62_FIELDID_adbtbl[] = {
 static const ASN1_ADB X9_62_FIELDID_adb = {
 	.flags = 0,
 	.offset = offsetof(X9_62_FIELDID, fieldType),
-	.app_items = 0,
 	.tbl = X9_62_FIELDID_adbtbl,
 	.tblcount = sizeof(X9_62_FIELDID_adbtbl) / sizeof(ASN1_ADB_TABLE),
 	.default_tt = &fieldID_def_tt,
@@ -1287,7 +1285,7 @@ EC_GROUP *
 d2i_ECPKParameters(EC_GROUP ** a, const unsigned char **in, long len)
 {
 	EC_GROUP *group = NULL;
-	ECPKPARAMETERS *params = NULL;
+	ECPKPARAMETERS *params;
 
 	if ((params = d2i_ECPKPARAMETERS(NULL, in, len)) == NULL) {
 		ECerror(EC_R_D2I_ECPKPARAMETERS_FAILURE);
@@ -1334,13 +1332,8 @@ d2i_ECPrivateKey(EC_KEY ** a, const unsigned char **in, long len)
 	EC_KEY *ret = NULL;
 	EC_PRIVATEKEY *priv_key = NULL;
 
-	if ((priv_key = EC_PRIVATEKEY_new()) == NULL) {
-		ECerror(ERR_R_MALLOC_FAILURE);
-		return NULL;
-	}
-	if ((priv_key = d2i_EC_PRIVATEKEY(&priv_key, in, len)) == NULL) {
+	if ((priv_key = d2i_EC_PRIVATEKEY(NULL, in, len)) == NULL) {
 		ECerror(ERR_R_EC_LIB);
-		EC_PRIVATEKEY_free(priv_key);
 		return NULL;
 	}
 	if (a == NULL || *a == NULL) {

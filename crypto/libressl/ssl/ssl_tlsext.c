@@ -1,4 +1,4 @@
-/* $OpenBSD: ssl_tlsext.c,v 1.99 2021/09/10 09:25:29 tb Exp $ */
+/* $OpenBSD: ssl_tlsext.c,v 1.110 2022/02/05 14:54:10 jsing Exp $ */
 /*
  * Copyright (c) 2016, 2017, 2019 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2017 Doug Hogan <doug@openbsd.org>
@@ -16,6 +16,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#include <sys/socket.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <ctype.h>
 
@@ -36,7 +41,7 @@ tlsext_alpn_client_needs(SSL *s, uint16_t msg_type)
 {
 	/* ALPN protos have been specified and this is the initial handshake */
 	return s->internal->alpn_client_proto_list != NULL &&
-	    S3I(s)->hs.finished_len == 0;
+	    s->s3->hs.finished_len == 0;
 }
 
 int
@@ -96,14 +101,14 @@ tlsext_alpn_server_parse(SSL *s, uint16_t msg_types, CBS *cbs, int *alert)
 	    s->ctx->internal->alpn_select_cb_arg);
 
 	if (r == SSL_TLSEXT_ERR_OK) {
-		free(S3I(s)->alpn_selected);
-		if ((S3I(s)->alpn_selected = malloc(selected_len)) == NULL) {
-			S3I(s)->alpn_selected_len = 0;
+		free(s->s3->alpn_selected);
+		if ((s->s3->alpn_selected = malloc(selected_len)) == NULL) {
+			s->s3->alpn_selected_len = 0;
 			*alert = SSL_AD_INTERNAL_ERROR;
 			return 0;
 		}
-		memcpy(S3I(s)->alpn_selected, selected, selected_len);
-		S3I(s)->alpn_selected_len = selected_len;
+		memcpy(s->s3->alpn_selected, selected, selected_len);
+		s->s3->alpn_selected_len = selected_len;
 
 		return 1;
 	}
@@ -125,7 +130,7 @@ tlsext_alpn_server_parse(SSL *s, uint16_t msg_types, CBS *cbs, int *alert)
 int
 tlsext_alpn_server_needs(SSL *s, uint16_t msg_type)
 {
-	return S3I(s)->alpn_selected != NULL;
+	return s->s3->alpn_selected != NULL;
 }
 
 int
@@ -139,8 +144,8 @@ tlsext_alpn_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 	if (!CBB_add_u8_length_prefixed(&list, &selected))
 		return 0;
 
-	if (!CBB_add_bytes(&selected, S3I(s)->alpn_selected,
-	    S3I(s)->alpn_selected_len))
+	if (!CBB_add_bytes(&selected, s->s3->alpn_selected,
+	    s->s3->alpn_selected_len))
 		return 0;
 
 	if (!CBB_flush(cbb))
@@ -172,8 +177,8 @@ tlsext_alpn_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	if (CBS_len(&proto) == 0)
 		goto err;
 
-	if (!CBS_stow(&proto, &(S3I(s)->alpn_selected),
-	    &(S3I(s)->alpn_selected_len)))
+	if (!CBS_stow(&proto, &(s->s3->alpn_selected),
+	    &(s->s3->alpn_selected_len)))
 		goto err;
 
 	return 1;
@@ -190,7 +195,7 @@ int
 tlsext_supportedgroups_client_needs(SSL *s, uint16_t msg_type)
 {
 	return ssl_has_ecc_ciphers(s) ||
-	    (S3I(s)->hs.our_max_tls_version >= TLS1_3_VERSION);
+	    (s->s3->hs.our_max_tls_version >= TLS1_3_VERSION);
 }
 
 int
@@ -242,8 +247,8 @@ tlsext_supportedgroups_server_parse(SSL *s, uint16_t msg_type, CBS *cbs,
 		uint16_t *groups;
 		int i;
 
-		if (S3I(s)->hs.tls13.hrr) {
-			if (SSI(s)->tlsext_supportedgroups == NULL) {
+		if (s->s3->hs.tls13.hrr) {
+			if (s->session->tlsext_supportedgroups == NULL) {
 				*alert = SSL_AD_HANDSHAKE_FAILURE;
 				return 0;
 			}
@@ -251,7 +256,7 @@ tlsext_supportedgroups_server_parse(SSL *s, uint16_t msg_type, CBS *cbs,
 			 * In the case of TLSv1.3 the client cannot change
 			 * the supported groups.
 			 */
-			if (groups_len != SSI(s)->tlsext_supportedgroups_length) {
+			if (groups_len != s->session->tlsext_supportedgroups_length) {
 				*alert = SSL_AD_ILLEGAL_PARAMETER;
 				return 0;
 			}
@@ -260,7 +265,7 @@ tlsext_supportedgroups_server_parse(SSL *s, uint16_t msg_type, CBS *cbs,
 
 				if (!CBS_get_u16(&grouplist, &group))
 					goto err;
-				if (SSI(s)->tlsext_supportedgroups[i] != group) {
+				if (s->session->tlsext_supportedgroups[i] != group) {
 					*alert = SSL_AD_ILLEGAL_PARAMETER;
 					return 0;
 				}
@@ -269,7 +274,7 @@ tlsext_supportedgroups_server_parse(SSL *s, uint16_t msg_type, CBS *cbs,
 			return 1;
 		}
 
-		if (SSI(s)->tlsext_supportedgroups != NULL)
+		if (s->session->tlsext_supportedgroups != NULL)
 			goto err;
 
 		if ((groups = reallocarray(NULL, groups_len,
@@ -290,8 +295,8 @@ tlsext_supportedgroups_server_parse(SSL *s, uint16_t msg_type, CBS *cbs,
 			goto err;
 		}
 
-		SSI(s)->tlsext_supportedgroups = groups;
-		SSI(s)->tlsext_supportedgroups_length = groups_len;
+		s->session->tlsext_supportedgroups = groups;
+		s->session->tlsext_supportedgroups_length = groups_len;
 	}
 
 	return 1;
@@ -383,8 +388,8 @@ tlsext_ecpf_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	}
 
 	if (!s->internal->hit) {
-		if (!CBS_stow(&ecpf, &(SSI(s)->tlsext_ecpointformatlist),
-		    &(SSI(s)->tlsext_ecpointformatlist_length))) {
+		if (!CBS_stow(&ecpf, &(s->session->tlsext_ecpointformatlist),
+		    &(s->session->tlsext_ecpointformatlist_length))) {
 			*alert = SSL_AD_INTERNAL_ERROR;
 			return 0;
 		}
@@ -445,8 +450,8 @@ tlsext_ri_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 
 	if (!CBB_add_u8_length_prefixed(cbb, &reneg))
 		return 0;
-	if (!CBB_add_bytes(&reneg, S3I(s)->previous_client_finished,
-	    S3I(s)->previous_client_finished_len))
+	if (!CBB_add_bytes(&reneg, s->s3->previous_client_finished,
+	    s->s3->previous_client_finished_len))
 		return 0;
 	if (!CBB_flush(cbb))
 		return 0;
@@ -464,15 +469,15 @@ tlsext_ri_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	if (CBS_len(cbs) != 0)
 		goto err;
 
-	if (!CBS_mem_equal(&reneg, S3I(s)->previous_client_finished,
-	    S3I(s)->previous_client_finished_len)) {
+	if (!CBS_mem_equal(&reneg, s->s3->previous_client_finished,
+	    s->s3->previous_client_finished_len)) {
 		SSLerror(s, SSL_R_RENEGOTIATION_MISMATCH);
 		*alert = SSL_AD_HANDSHAKE_FAILURE;
 		return 0;
 	}
 
-	S3I(s)->renegotiate_seen = 1;
-	S3I(s)->send_connection_binding = 1;
+	s->s3->renegotiate_seen = 1;
+	s->s3->send_connection_binding = 1;
 
 	return 1;
 
@@ -485,8 +490,8 @@ tlsext_ri_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_ri_server_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.negotiated_tls_version < TLS1_3_VERSION &&
-	    S3I(s)->send_connection_binding);
+	return (s->s3->hs.negotiated_tls_version < TLS1_3_VERSION &&
+	    s->s3->send_connection_binding);
 }
 
 int
@@ -496,11 +501,11 @@ tlsext_ri_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 
 	if (!CBB_add_u8_length_prefixed(cbb, &reneg))
 		return 0;
-	if (!CBB_add_bytes(&reneg, S3I(s)->previous_client_finished,
-	    S3I(s)->previous_client_finished_len))
+	if (!CBB_add_bytes(&reneg, s->s3->previous_client_finished,
+	    s->s3->previous_client_finished_len))
 		return 0;
-	if (!CBB_add_bytes(&reneg, S3I(s)->previous_server_finished,
-	    S3I(s)->previous_server_finished_len))
+	if (!CBB_add_bytes(&reneg, s->s3->previous_server_finished,
+	    s->s3->previous_server_finished_len))
 		return 0;
 	if (!CBB_flush(cbb))
 		return 0;
@@ -517,10 +522,10 @@ tlsext_ri_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	 * Ensure that the previous client and server values are both not
 	 * present, or that they are both present.
 	 */
-	if ((S3I(s)->previous_client_finished_len == 0 &&
-	    S3I(s)->previous_server_finished_len != 0) ||
-	    (S3I(s)->previous_client_finished_len != 0 &&
-	    S3I(s)->previous_server_finished_len == 0)) {
+	if ((s->s3->previous_client_finished_len == 0 &&
+	    s->s3->previous_server_finished_len != 0) ||
+	    (s->s3->previous_client_finished_len != 0 &&
+	    s->s3->previous_server_finished_len == 0)) {
 		*alert = SSL_AD_INTERNAL_ERROR;
 		return 0;
 	}
@@ -528,31 +533,31 @@ tlsext_ri_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	if (!CBS_get_u8_length_prefixed(cbs, &reneg))
 		goto err;
 	if (!CBS_get_bytes(&reneg, &prev_client,
-	    S3I(s)->previous_client_finished_len))
+	    s->s3->previous_client_finished_len))
 		goto err;
 	if (!CBS_get_bytes(&reneg, &prev_server,
-	    S3I(s)->previous_server_finished_len))
+	    s->s3->previous_server_finished_len))
 		goto err;
 	if (CBS_len(&reneg) != 0)
 		goto err;
 	if (CBS_len(cbs) != 0)
 		goto err;
 
-	if (!CBS_mem_equal(&prev_client, S3I(s)->previous_client_finished,
-	    S3I(s)->previous_client_finished_len)) {
+	if (!CBS_mem_equal(&prev_client, s->s3->previous_client_finished,
+	    s->s3->previous_client_finished_len)) {
 		SSLerror(s, SSL_R_RENEGOTIATION_MISMATCH);
 		*alert = SSL_AD_HANDSHAKE_FAILURE;
 		return 0;
 	}
-	if (!CBS_mem_equal(&prev_server, S3I(s)->previous_server_finished,
-	    S3I(s)->previous_server_finished_len)) {
+	if (!CBS_mem_equal(&prev_server, s->s3->previous_server_finished,
+	    s->s3->previous_server_finished_len)) {
 		SSLerror(s, SSL_R_RENEGOTIATION_MISMATCH);
 		*alert = SSL_AD_HANDSHAKE_FAILURE;
 		return 0;
 	}
 
-	S3I(s)->renegotiate_seen = 1;
-	S3I(s)->send_connection_binding = 1;
+	s->s3->renegotiate_seen = 1;
+	s->s3->send_connection_binding = 1;
 
 	return 1;
 
@@ -568,17 +573,17 @@ tlsext_ri_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_sigalgs_client_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.our_max_tls_version >= TLS1_2_VERSION);
+	return (s->s3->hs.our_max_tls_version >= TLS1_2_VERSION);
 }
 
 int
 tlsext_sigalgs_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 {
-	uint16_t tls_version = S3I(s)->hs.negotiated_tls_version;
+	uint16_t tls_version = s->s3->hs.negotiated_tls_version;
 	CBB sigalgs;
 
 	if (msg_type == SSL_TLSEXT_MSG_CH)
-		tls_version = S3I(s)->hs.our_min_tls_version;
+		tls_version = s->s3->hs.our_min_tls_version;
 
 	if (!CBB_add_u16_length_prefixed(cbb, &sigalgs))
 		return 0;
@@ -599,7 +604,7 @@ tlsext_sigalgs_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 		return 0;
 	if (CBS_len(&sigalgs) % 2 != 0 || CBS_len(&sigalgs) > 64)
 		return 0;
-	if (!CBS_stow(&sigalgs, &S3I(s)->hs.sigalgs, &S3I(s)->hs.sigalgs_len))
+	if (!CBS_stow(&sigalgs, &s->s3->hs.sigalgs, &s->s3->hs.sigalgs_len))
 		return 0;
 
 	return 1;
@@ -608,7 +613,7 @@ tlsext_sigalgs_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_sigalgs_server_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.negotiated_tls_version >= TLS1_3_VERSION);
+	return (s->s3->hs.negotiated_tls_version >= TLS1_3_VERSION);
 }
 
 int
@@ -618,7 +623,7 @@ tlsext_sigalgs_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 
 	if (!CBB_add_u16_length_prefixed(cbb, &sigalgs))
 		return 0;
-	if (!ssl_sigalgs_build(S3I(s)->hs.negotiated_tls_version, &sigalgs))
+	if (!ssl_sigalgs_build(s->s3->hs.negotiated_tls_version, &sigalgs))
 		return 0;
 	if (!CBB_flush(cbb))
 		return 0;
@@ -638,7 +643,7 @@ tlsext_sigalgs_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 		return 0;
 	if (CBS_len(&sigalgs) % 2 != 0 || CBS_len(&sigalgs) > 64)
 		return 0;
-	if (!CBS_stow(&sigalgs, &S3I(s)->hs.sigalgs, &S3I(s)->hs.sigalgs_len))
+	if (!CBS_stow(&sigalgs, &s->s3->hs.sigalgs, &s->s3->hs.sigalgs_len))
 		return 0;
 
 	return 1;
@@ -673,6 +678,29 @@ tlsext_sni_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 	return 1;
 }
 
+static int
+tlsext_sni_is_ip_literal(CBS *cbs, int *is_ip)
+{
+	union {
+		struct in_addr ip4;
+		struct in6_addr ip6;
+	} addrbuf;
+	char *hostname = NULL;
+
+	*is_ip = 0;
+
+	if (!CBS_strdup(cbs, &hostname))
+		return 0;
+
+	if (inet_pton(AF_INET, hostname, &addrbuf) == 1 ||
+	    inet_pton(AF_INET6, hostname, &addrbuf) == 1)
+		*is_ip = 1;
+
+	free(hostname);
+
+	return 1;
+}
+
 /*
  * Validate that the CBS contains only a hostname consisting of RFC 5890
  * compliant A-labels (see RFC 6066 section 3). Not a complete check
@@ -680,18 +708,26 @@ tlsext_sni_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
  * correct structure and character set.
  */
 int
-tlsext_sni_is_valid_hostname(CBS *cbs)
+tlsext_sni_is_valid_hostname(CBS *cbs, int *is_ip)
 {
 	uint8_t prev, c = 0;
 	int component = 0;
 	CBS hostname;
+
+	*is_ip = 0;
 
 	CBS_dup(cbs, &hostname);
 
 	if (CBS_len(&hostname) > TLSEXT_MAXLEN_host_name)
 		return 0;
 
-	while(CBS_len(&hostname) > 0) {
+	/* An IP literal is invalid as a host name (RFC 6066 section 3). */
+	if (!tlsext_sni_is_ip_literal(&hostname, is_ip))
+		return 0;
+	if (*is_ip)
+		return 0;
+
+	while (CBS_len(&hostname) > 0) {
 		prev = c;
 		if (!CBS_get_u8(&hostname, &c))
 			return 0;
@@ -727,12 +763,14 @@ tlsext_sni_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 {
 	CBS server_name_list, host_name;
 	uint8_t name_type;
+	int is_ip;
 
 	if (!CBS_get_u16_length_prefixed(cbs, &server_name_list))
 		goto err;
 
 	if (!CBS_get_u8(&server_name_list, &name_type))
 		goto err;
+
 	/*
 	 * RFC 6066 section 3, only one type (host_name) is specified.
 	 * We do not tolerate unknown types, neither does BoringSSL.
@@ -743,22 +781,30 @@ tlsext_sni_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 		goto err;
 	}
 
-
-	if (!CBS_get_u16_length_prefixed(&server_name_list, &host_name))
-		goto err;
 	/*
 	 * RFC 6066 section 3 specifies a host name must be at least 1 byte
 	 * so 0 length is a decode error.
 	 */
+	if (!CBS_get_u16_length_prefixed(&server_name_list, &host_name))
+		goto err;
 	if (CBS_len(&host_name) < 1)
 		goto err;
 
-	if (!tlsext_sni_is_valid_hostname(&host_name)) {
+	if (!tlsext_sni_is_valid_hostname(&host_name, &is_ip)) {
+		/*
+		 * Various pieces of software have been known to set the SNI
+		 * host name to an IP address, even though that violates the
+		 * RFC. If this is the case, pretend the SNI extension does
+		 * not exist.
+		 */
+		if (is_ip)
+			goto done;
+
 		*alert = SSL_AD_ILLEGAL_PARAMETER;
 		goto err;
 	}
 
-	if (s->internal->hit || S3I(s)->hs.tls13.hrr) {
+	if (s->internal->hit || s->s3->hs.tls13.hrr) {
 		if (s->session->tlsext_hostname == NULL) {
 			*alert = SSL_AD_UNRECOGNIZED_NAME;
 			goto err;
@@ -777,6 +823,7 @@ tlsext_sni_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 		}
 	}
 
+ done:
 	/*
 	 * RFC 6066 section 3 forbids multiple host names with the same type,
 	 * therefore we allow only one entry.
@@ -980,7 +1027,7 @@ tlsext_ocsp_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_ocsp_server_needs(SSL *s, uint16_t msg_type)
 {
-	if (S3I(s)->hs.negotiated_tls_version >= TLS1_3_VERSION &&
+	if (s->s3->hs.negotiated_tls_version >= TLS1_3_VERSION &&
 	    s->tlsext_status_type == TLSEXT_STATUSTYPE_ocsp &&
 	    s->ctx->internal->tlsext_status_cb != NULL) {
 		s->internal->tlsext_status_expected = 0;
@@ -997,7 +1044,7 @@ tlsext_ocsp_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 {
 	CBB ocsp_response;
 
-	if (S3I(s)->hs.negotiated_tls_version >= TLS1_3_VERSION) {
+	if (s->s3->hs.negotiated_tls_version >= TLS1_3_VERSION) {
 		if (!CBB_add_u8(cbb, TLSEXT_STATUSTYPE_ocsp))
 			return 0;
 		if (!CBB_add_u24_length_prefixed(cbb, &ocsp_response))
@@ -1404,19 +1451,23 @@ tlsext_srtp_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_keyshare_client_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.our_max_tls_version >= TLS1_3_VERSION);
+	return (s->s3->hs.our_max_tls_version >= TLS1_3_VERSION);
 }
 
 int
 tlsext_keyshare_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 {
-	CBB client_shares;
+	CBB client_shares, key_exchange;
 
 	if (!CBB_add_u16_length_prefixed(cbb, &client_shares))
 		return 0;
 
-	if (!tls13_key_share_public(S3I(s)->hs.tls13.key_share,
-	    &client_shares))
+	if (!CBB_add_u16(&client_shares,
+	    tls_key_share_group(s->s3->hs.key_share)))
+		return 0;
+	if (!CBB_add_u16_length_prefixed(&client_shares, &key_exchange))
+		return 0;
+	if (!tls_key_share_public(s->s3->hs.key_share, &key_exchange))
 		return 0;
 
 	if (!CBB_flush(cbb))
@@ -1429,16 +1480,17 @@ int
 tlsext_keyshare_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 {
 	CBS client_shares, key_exchange;
+	int decode_error;
 	uint16_t group;
 
 	if (!CBS_get_u16_length_prefixed(cbs, &client_shares))
-		goto err;
+		return 0;
 
 	while (CBS_len(&client_shares) > 0) {
 
 		/* Unpack client share. */
 		if (!CBS_get_u16(&client_shares, &group))
-			goto err;
+			return 0;
 		if (!CBS_get_u16_length_prefixed(&client_shares, &key_exchange))
 			return 0;
 
@@ -1451,9 +1503,9 @@ tlsext_keyshare_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 		 * Ignore this client share if we're using earlier than TLSv1.3
 		 * or we've already selected a key share.
 		 */
-		if (S3I(s)->hs.our_max_tls_version < TLS1_3_VERSION)
+		if (s->s3->hs.our_max_tls_version < TLS1_3_VERSION)
 			continue;
-		if (S3I(s)->hs.tls13.key_share != NULL)
+		if (s->s3->hs.key_share != NULL)
 			continue;
 
 		/* XXX - consider implementing server preference. */
@@ -1461,42 +1513,51 @@ tlsext_keyshare_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 			continue;
 
 		/* Decode and store the selected key share. */
-		S3I(s)->hs.tls13.key_share = tls13_key_share_new(group);
-		if (S3I(s)->hs.tls13.key_share == NULL)
-			goto err;
-		if (!tls13_key_share_peer_public(S3I(s)->hs.tls13.key_share,
-		    group, &key_exchange))
-			goto err;
+		if ((s->s3->hs.key_share = tls_key_share_new(group)) == NULL) {
+			*alert = SSL_AD_INTERNAL_ERROR;
+			return 0;
+		}
+		if (!tls_key_share_peer_public(s->s3->hs.key_share,
+		    &key_exchange, &decode_error, NULL)) {
+			if (!decode_error)
+				*alert = SSL_AD_INTERNAL_ERROR;
+			return 0;
+		}
 	}
 
 	return 1;
-
- err:
-	*alert = SSL_AD_DECODE_ERROR;
-	return 0;
 }
 
 int
 tlsext_keyshare_server_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.negotiated_tls_version >= TLS1_3_VERSION &&
+	return (s->s3->hs.negotiated_tls_version >= TLS1_3_VERSION &&
 	    tlsext_extension_seen(s, TLSEXT_TYPE_key_share));
 }
 
 int
 tlsext_keyshare_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 {
+	CBB key_exchange;
+
 	/* In the case of a HRR, we only send the server selected group. */
-	if (S3I(s)->hs.tls13.hrr) {
-		if (S3I(s)->hs.tls13.server_group == 0)
+	if (s->s3->hs.tls13.hrr) {
+		if (s->s3->hs.tls13.server_group == 0)
 			return 0;
-		return CBB_add_u16(cbb, S3I(s)->hs.tls13.server_group);
+		return CBB_add_u16(cbb, s->s3->hs.tls13.server_group);
 	}
 
-	if (S3I(s)->hs.tls13.key_share == NULL)
+	if (s->s3->hs.key_share == NULL)
 		return 0;
 
-	if (!tls13_key_share_public(S3I(s)->hs.tls13.key_share, cbb))
+	if (!CBB_add_u16(cbb, tls_key_share_group(s->s3->hs.key_share)))
+		return 0;
+	if (!CBB_add_u16_length_prefixed(cbb, &key_exchange))
+		return 0;
+	if (!tls_key_share_public(s->s3->hs.key_share, &key_exchange))
+		return 0;
+
+	if (!CBB_flush(cbb))
 		return 0;
 
 	return 1;
@@ -1506,34 +1567,41 @@ int
 tlsext_keyshare_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 {
 	CBS key_exchange;
+	int decode_error;
 	uint16_t group;
 
 	/* Unpack server share. */
 	if (!CBS_get_u16(cbs, &group))
-		goto err;
+		return 0;
 
 	if (CBS_len(cbs) == 0) {
-		/* HRR does not include an actual key share. */
-		/* XXX - we should know that we are in a HRR... */
-		S3I(s)->hs.tls13.server_group = group;
+		/* HRR does not include an actual key share, only the group. */
+		if (msg_type != SSL_TLSEXT_MSG_HRR)
+			return 0;
+
+		s->s3->hs.tls13.server_group = group;
 		return 1;
 	}
 
 	if (!CBS_get_u16_length_prefixed(cbs, &key_exchange))
 		return 0;
 
-	if (S3I(s)->hs.tls13.key_share == NULL)
+	if (s->s3->hs.key_share == NULL) {
+		*alert = SSL_AD_INTERNAL_ERROR;
 		return 0;
-
-	if (!tls13_key_share_peer_public(S3I(s)->hs.tls13.key_share,
-	    group, &key_exchange))
-		goto err;
+	}
+	if (tls_key_share_group(s->s3->hs.key_share) != group) {
+		*alert = SSL_AD_INTERNAL_ERROR;
+		return 0;
+	}
+	if (!tls_key_share_peer_public(s->s3->hs.key_share,
+	    &key_exchange, &decode_error, NULL)) {
+		if (!decode_error)
+			*alert = SSL_AD_INTERNAL_ERROR;
+		return 0;
+	}
 
 	return 1;
-
- err:
-	*alert = SSL_AD_DECODE_ERROR;
-	return 0;
 }
 
 /*
@@ -1542,7 +1610,7 @@ tlsext_keyshare_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_versions_client_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.our_max_tls_version >= TLS1_3_VERSION);
+	return (s->s3->hs.our_max_tls_version >= TLS1_3_VERSION);
 }
 
 int
@@ -1552,8 +1620,8 @@ tlsext_versions_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 	uint16_t version;
 	CBB versions;
 
-	max = S3I(s)->hs.our_max_tls_version;
-	min = S3I(s)->hs.our_min_tls_version;
+	max = s->s3->hs.our_max_tls_version;
+	min = s->s3->hs.our_min_tls_version;
 
 	if (!CBB_add_u8_length_prefixed(cbb, &versions))
 		return 0;
@@ -1578,8 +1646,8 @@ tlsext_versions_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	uint16_t max, min;
 	uint16_t matched_version = 0;
 
-	max = S3I(s)->hs.our_max_tls_version;
-	min = S3I(s)->hs.our_min_tls_version;
+	max = s->s3->hs.our_max_tls_version;
+	min = s->s3->hs.our_min_tls_version;
 
 	if (!CBS_get_u8_length_prefixed(cbs, &versions))
 		goto err;
@@ -1612,7 +1680,7 @@ tlsext_versions_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_versions_server_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.negotiated_tls_version >= TLS1_3_VERSION);
+	return (s->s3->hs.negotiated_tls_version >= TLS1_3_VERSION);
 }
 
 int
@@ -1638,7 +1706,7 @@ tlsext_versions_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	}
 
 	/* XXX test between min and max once initialization code goes in */
-	S3I(s)->hs.tls13.server_version = selected_version;
+	s->s3->hs.tls13.server_version = selected_version;
 
 	return 1;
 }
@@ -1651,8 +1719,8 @@ tlsext_versions_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 int
 tlsext_cookie_client_needs(SSL *s, uint16_t msg_type)
 {
-	return (S3I(s)->hs.our_max_tls_version >= TLS1_3_VERSION &&
-	    S3I(s)->hs.tls13.cookie_len > 0 && S3I(s)->hs.tls13.cookie != NULL);
+	return (s->s3->hs.our_max_tls_version >= TLS1_3_VERSION &&
+	    s->s3->hs.tls13.cookie_len > 0 && s->s3->hs.tls13.cookie != NULL);
 }
 
 int
@@ -1663,8 +1731,8 @@ tlsext_cookie_client_build(SSL *s, uint16_t msg_type, CBB *cbb)
 	if (!CBB_add_u16_length_prefixed(cbb, &cookie))
 		return 0;
 
-	if (!CBB_add_bytes(&cookie, S3I(s)->hs.tls13.cookie,
-	    S3I(s)->hs.tls13.cookie_len))
+	if (!CBB_add_bytes(&cookie, s->s3->hs.tls13.cookie,
+	    s->s3->hs.tls13.cookie_len))
 		return 0;
 
 	if (!CBB_flush(cbb))
@@ -1681,7 +1749,7 @@ tlsext_cookie_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	if (!CBS_get_u16_length_prefixed(cbs, &cookie))
 		goto err;
 
-	if (CBS_len(&cookie) != S3I(s)->hs.tls13.cookie_len)
+	if (CBS_len(&cookie) != s->s3->hs.tls13.cookie_len)
 		goto err;
 
 	/*
@@ -1689,8 +1757,8 @@ tlsext_cookie_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	 * sent - client *MUST* send the same cookie with new CR after
 	 * a cookie is sent by the server with an HRR.
 	 */
-	if (!CBS_mem_equal(&cookie, S3I(s)->hs.tls13.cookie,
-	    S3I(s)->hs.tls13.cookie_len)) {
+	if (!CBS_mem_equal(&cookie, s->s3->hs.tls13.cookie,
+	    s->s3->hs.tls13.cookie_len)) {
 		/* XXX special cookie mismatch alert? */
 		*alert = SSL_AD_ILLEGAL_PARAMETER;
 		return 0;
@@ -1710,8 +1778,8 @@ tlsext_cookie_server_needs(SSL *s, uint16_t msg_type)
 	 * Server needs to set cookie value in tls13 handshake
 	 * in order to send one, should only be sent with HRR.
 	 */
-	return (S3I(s)->hs.our_max_tls_version >= TLS1_3_VERSION &&
-	    S3I(s)->hs.tls13.cookie_len > 0 && S3I(s)->hs.tls13.cookie != NULL);
+	return (s->s3->hs.our_max_tls_version >= TLS1_3_VERSION &&
+	    s->s3->hs.tls13.cookie_len > 0 && s->s3->hs.tls13.cookie != NULL);
 }
 
 int
@@ -1724,8 +1792,8 @@ tlsext_cookie_server_build(SSL *s, uint16_t msg_type, CBB *cbb)
 	if (!CBB_add_u16_length_prefixed(cbb, &cookie))
 		return 0;
 
-	if (!CBB_add_bytes(&cookie, S3I(s)->hs.tls13.cookie,
-	    S3I(s)->hs.tls13.cookie_len))
+	if (!CBB_add_bytes(&cookie, s->s3->hs.tls13.cookie,
+	    s->s3->hs.tls13.cookie_len))
 		return 0;
 
 	if (!CBB_flush(cbb))
@@ -1744,8 +1812,8 @@ tlsext_cookie_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	 * HRR from a server with a cookie to process after accepting
 	 * one from the server in the same handshake
 	 */
-	if (S3I(s)->hs.tls13.cookie != NULL ||
-	    S3I(s)->hs.tls13.cookie_len != 0) {
+	if (s->s3->hs.tls13.cookie != NULL ||
+	    s->s3->hs.tls13.cookie_len != 0) {
 		*alert = SSL_AD_ILLEGAL_PARAMETER;
 		return 0;
 	}
@@ -1753,8 +1821,8 @@ tlsext_cookie_client_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 	if (!CBS_get_u16_length_prefixed(cbs, &cookie))
 		goto err;
 
-	if (!CBS_stow(&cookie, &S3I(s)->hs.tls13.cookie,
-	    &S3I(s)->hs.tls13.cookie_len))
+	if (!CBS_stow(&cookie, &s->s3->hs.tls13.cookie,
+	    &s->s3->hs.tls13.cookie_len))
 		goto err;
 
 	return 1;
@@ -1981,7 +2049,7 @@ tlsext_extension_seen(SSL *s, uint16_t type)
 
 	if (tls_extension_find(type, &idx) == NULL)
 		return 0;
-	return ((S3I(s)->hs.extensions_seen & (1 << idx)) != 0);
+	return ((s->s3->hs.extensions_seen & (1 << idx)) != 0);
 }
 
 static const struct tls_extension_funcs *
@@ -2081,7 +2149,7 @@ tlsext_parse(SSL *s, int is_server, uint16_t msg_type, CBS *cbs, int *alert)
 
 	tls_version = ssl_effective_tls_version(s);
 
-	S3I(s)->hs.extensions_seen = 0;
+	s->s3->hs.extensions_seen = 0;
 
 	/* An empty extensions block is valid. */
 	if (CBS_len(cbs) == 0)
@@ -2123,9 +2191,9 @@ tlsext_parse(SSL *s, int is_server, uint16_t msg_type, CBS *cbs, int *alert)
 		}
 
 		/* Check for duplicate known extensions. */
-		if ((S3I(s)->hs.extensions_seen & (1 << idx)) != 0)
+		if ((s->s3->hs.extensions_seen & (1 << idx)) != 0)
 			goto err;
-		S3I(s)->hs.extensions_seen |= (1 << idx);
+		s->s3->hs.extensions_seen |= (1 << idx);
 
 		ext = tlsext_funcs(tlsext, is_server);
 		if (!ext->parse(s, msg_type, &extension_data, &alert_desc))
@@ -2147,10 +2215,10 @@ static void
 tlsext_server_reset_state(SSL *s)
 {
 	s->tlsext_status_type = -1;
-	S3I(s)->renegotiate_seen = 0;
-	free(S3I(s)->alpn_selected);
-	S3I(s)->alpn_selected = NULL;
-	S3I(s)->alpn_selected_len = 0;
+	s->s3->renegotiate_seen = 0;
+	free(s->s3->alpn_selected);
+	s->s3->alpn_selected = NULL;
+	s->s3->alpn_selected_len = 0;
 	s->internal->srtp_profile = NULL;
 }
 
@@ -2173,10 +2241,10 @@ tlsext_server_parse(SSL *s, uint16_t msg_type, CBS *cbs, int *alert)
 static void
 tlsext_client_reset_state(SSL *s)
 {
-	S3I(s)->renegotiate_seen = 0;
-	free(S3I(s)->alpn_selected);
-	S3I(s)->alpn_selected = NULL;
-	S3I(s)->alpn_selected_len = 0;
+	s->s3->renegotiate_seen = 0;
+	free(s->s3->alpn_selected);
+	s->s3->alpn_selected = NULL;
+	s->s3->alpn_selected_len = 0;
 }
 
 int

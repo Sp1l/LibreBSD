@@ -1,4 +1,4 @@
-/*	$OpenBSD: gost2814789t.c,v 1.2 2014/12/15 06:03:15 miod Exp $	*/
+/*	$OpenBSD: gost2814789t.c,v 1.7 2022/02/08 17:59:39 tb Exp $	*/
 /* vim: set fileencoding=ascii : Charset: ASCII */
 /* test/gostr2814789t.c */
 /* ====================================================================
@@ -1251,8 +1251,8 @@ int main(int argc, char *argv[])
     unsigned int t;
     uint64_t ullMaxLen = 6*1000*1000;
     int ignore = 0;
-    EVP_MD_CTX mctx;
-    EVP_CIPHER_CTX ectx;
+    EVP_MD_CTX *mctx = NULL;
+    EVP_CIPHER_CTX *ectx = NULL;
     EVP_PKEY *mac_key;
     unsigned char bDerive[EVP_MAX_KEY_LENGTH];
     unsigned char bTest[G89_MAX_TC_LEN];
@@ -1270,17 +1270,19 @@ int main(int argc, char *argv[])
     const EVP_CIPHER *cp_g89cnt = NULL;
     const EVP_CIPHER *ctype = NULL;
     const EVP_MD *md_g89imit = NULL;
+    int ret = 0;
 
     printf("Testing GOST 28147-89 ");
 
     if(1 < argc) {
        if(1 != sscanf(argv[1], "%" SCNu64, &ullMaxLen) ||
-          ( 2 < argc ? 
+          ( 2 < argc ?
             1 != sscanf(argv[2], "%d", &ignore) : 0)) {
            fflush(NULL);
-           fprintf(stderr, "Usage: %s [maxlen [ignore-error]]\n", 
+           fprintf(stderr, "Usage: %s [maxlen [ignore-error]]\n",
                                argv[0]);
-           return 1;
+           ret = 1;
+           goto out;
        }
     }
 
@@ -1297,35 +1299,40 @@ int main(int argc, char *argv[])
 	fflush(NULL);
 	fprintf(stderr, "\"" SN_id_GostR3411_94 "\" - not found\n");
 	if(!ignore) {
-	    return 7;
+	    ret = 7;
+	    goto out;
 	}
     }
     if(NULL == (cp_g89cfb = EVP_get_cipherbyname(SN_id_Gost28147_89))) {
 	fflush(NULL);
 	fprintf(stderr, "\"" SN_id_Gost28147_89 "\" - not found\n");
 	if(!ignore) {
-	    return 8;
+	    ret = 8;
+	    goto out;
 	}
     }
     if(NULL == (cp_g89cnt = EVP_get_cipherbyname(SN_gost89_cnt))) {
 	fflush(NULL);
 	fprintf(stderr, "\"" SN_gost89_cnt "\" - not found\n");
 	if(!ignore) {
-	    return 9;
+	    ret = 9;
+	    goto out;
 	}
     }
     if(NULL == (cp_g89ecb = EVP_get_cipherbyname(SN_gost89_ecb))) {
 	fflush(NULL);
 	fprintf(stderr, "\"" SN_gost89_ecb "\" - not found\n");
 	if(!ignore) {
-	    return 8;
+	    ret = 8;
+	    goto out;
 	}
     }
     if(NULL == (md_g89imit = EVP_get_digestbyname(SN_id_Gost28147_89_MAC))) {
 	fflush(NULL);
 	fprintf(stderr, "\"" SN_id_Gost28147_89_MAC "\" - not found\n");
 	if(!ignore) {
-	    return 10;
+	    ret = 10;
+	    goto out;
 	}
     }
 
@@ -1334,15 +1341,16 @@ int main(int argc, char *argv[])
 	if(NULL != tcs[t].szDerive) {
 	memset(bDerive, 0x3c, sizeof(bDerive));
 	mdl = sizeof(bDerive);
-	EVP_Digest(tcs[t].szDerive, strlen(tcs[t].szDerive), 
+	EVP_Digest(tcs[t].szDerive, strlen(tcs[t].szDerive),
 			bDerive, &mdl,
 			md_gost94, NULL);
 	if(0 != memcmp(tcs[t].bRawKey, bDerive, mdl)) {
 	    fflush(NULL);
 	    fprintf(stderr, "Engine test t=%d "
-	    		"derive key error.\n", t);
+			"derive key error.\n", t);
 	    if(!ignore) {
-		return 12;
+		ret = 12;
+		goto out;
 	    }
 	}
 	}
@@ -1363,28 +1371,29 @@ int main(int argc, char *argv[])
 	case G89_CNT:
 	    ctype = cp_g89cnt;
 engine_cipher_check:
-	    EVP_CIPHER_CTX_init(&ectx);
-	    EVP_EncryptInit_ex(&ectx, ctype, NULL,
+	    if ((ectx = EVP_CIPHER_CTX_new()) == NULL)
+		    goto imit_fail;
+	    EVP_EncryptInit_ex(ectx, ctype, NULL,
 				    tcs[t].bRawKey, tcs[t].bIV);
-	    EVP_CIPHER_CTX_ctrl(&ectx, EVP_CTRL_GOST_SET_SBOX, OBJ_txt2nid(tcs[t].szParamSet), 0);
+	    EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_GOST_SET_SBOX, OBJ_txt2nid(tcs[t].szParamSet), 0);
 	    if(G89_MAX_TC_LEN >= tcs[t].ullLen) {
 		enlu = sizeof(bTest);
-		EVP_EncryptUpdate(&ectx, bTest, &enlu, 
+		EVP_EncryptUpdate(ectx, bTest, &enlu,
 				    tcs[t].bIn, (int)tcs[t].ullLen);
 		l = (size_t)tcs[t].ullLen;
 	    } else {
-		for(ullLeft = tcs[t].ullLen; 
-			    ullLeft >= sizeof(bZB); 
+		for(ullLeft = tcs[t].ullLen;
+			    ullLeft >= sizeof(bZB);
 				    ullLeft -= sizeof(bZB)) {
-		    printf("B"); 
+		    printf("B");
 		    fflush(NULL);
 		    enlu = sizeof(bTS);
-		    EVP_EncryptUpdate(&ectx, bTS, &enlu, 
+		    EVP_EncryptUpdate(ectx, bTS, &enlu,
 					    bZB, sizeof(bZB));
 		}
-		printf("b%" PRIu64 "/%" PRIu64, ullLeft, tcs[t].ullLen); 
+		printf("b%" PRIu64 "/%" PRIu64, ullLeft, tcs[t].ullLen);
 		fflush(NULL);
-		EVP_EncryptUpdate(&ectx, bTS, &enlu, 
+		EVP_EncryptUpdate(ectx, bTS, &enlu,
 					bZB, (int)ullLeft);
 		memcpy(bTest, &bTS[enlu-16], 16);
 		enlu = (int)tcs[t].ullLen;
@@ -1394,38 +1403,41 @@ engine_cipher_check:
 	    if (tcs[t].gMode == G89_ECB)
 		enlf = 0;
 	    else
-		EVP_EncryptFinal_ex(&ectx, bTest1, &enlf);
-	    EVP_CIPHER_CTX_cleanup(&ectx);
+		EVP_EncryptFinal_ex(ectx, bTest1, &enlf);
+	    EVP_CIPHER_CTX_free(ectx);
+	    ectx = NULL;
 	    break;
 	case G89_IMIT:
-	    EVP_MD_CTX_init(&mctx);
+	    if ((mctx = EVP_MD_CTX_new()) == NULL)
+		    goto imit_fail;
 	    mac_key = EVP_PKEY_new_mac_key(
 				NID_id_Gost28147_89_MAC, NULL,
 				bDerive, mdl);
 	    if (!mac_key)
 		goto imit_fail;
-            EVP_DigestSignInit(&mctx, NULL, 
+            EVP_DigestSignInit(mctx, NULL,
 				    md_g89imit, NULL, mac_key);
-	    EVP_MD_CTX_ctrl(&mctx, EVP_MD_CTRL_GOST_SET_SBOX, OBJ_txt2nid(tcs[t].szParamSet), 0);
+	    EVP_MD_CTX_ctrl(mctx, EVP_MD_CTRL_GOST_SET_SBOX, OBJ_txt2nid(tcs[t].szParamSet), 0);
 	    if(G89_MAX_TC_LEN >= tcs[t].ullLen) {
-		EVP_DigestSignUpdate(&mctx, tcs[t].bIn, 
+		EVP_DigestSignUpdate(mctx, tcs[t].bIn,
 				    (unsigned int)tcs[t].ullLen);
 	    } else {
-		for(ullLeft = tcs[t].ullLen; 
-			    ullLeft >= sizeof(bZB); 
+		for(ullLeft = tcs[t].ullLen;
+			    ullLeft >= sizeof(bZB);
 				    ullLeft -= sizeof(bZB)) {
-		    printf("B"); 
+		    printf("B");
 		    fflush(NULL);
-		    EVP_DigestSignUpdate(&mctx, bZB, sizeof(bZB));
+		    EVP_DigestSignUpdate(mctx, bZB, sizeof(bZB));
 		}
-		printf("b%" PRIu64 "/%" PRIu64, ullLeft, tcs[t].ullLen); 
+		printf("b%" PRIu64 "/%" PRIu64, ullLeft, tcs[t].ullLen);
 		fflush(NULL);
-		EVP_DigestSignUpdate(&mctx, bZB, 
+		EVP_DigestSignUpdate(mctx, bZB,
 					(unsigned int)ullLeft);
 	    }
 	    siglen = 4;
-	    OPENSSL_assert(EVP_DigestSignFinal(&mctx, bTest, &siglen));
-	    EVP_MD_CTX_cleanup(&mctx);
+	    OPENSSL_assert(EVP_DigestSignFinal(mctx, bTest, &siglen));
+	    EVP_MD_CTX_free(mctx);
+	    mctx = NULL;
 	    EVP_PKEY_free(mac_key);
 	    enlu = (int)tcs[t].ullLen;
 	    enlf = 0;
@@ -1439,7 +1451,8 @@ imit_fail:
 	    fprintf(stderr, "\nEngine test t=%d len=%" PRIu64
 			    " mode=%d failed.\n", t, tcs[t].ullLen, tcs[t].gMode);
 	    if(!ignore) {
-	    	return 13;
+		ret = 13;
+		goto out;
 	    }
 	} else {
 	    printf(".");
@@ -1450,10 +1463,14 @@ imit_fail:
     printf(" passed\n");
     fflush(NULL);
 
+ out:
+
     bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
     ERR_print_errors(bio_err);
     (void)BIO_flush(bio_err);
     BIO_free(bio_err);
-    return 0;
+    EVP_CIPHER_CTX_free(ectx);
+    EVP_MD_CTX_free(mctx);
+    return ret;
 }
 #endif

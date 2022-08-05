@@ -1,4 +1,4 @@
-/* $OpenBSD: tls13_client.c,v 1.86 2021/06/29 19:20:39 jsing Exp $ */
+/* $OpenBSD: tls13_client.c,v 1.94 2022/02/03 16:33:12 jsing Exp $ */
 /*
  * Copyright (c) 2018, 2019 Joel Sing <jsing@openbsd.org>
  *
@@ -36,7 +36,7 @@ tls13_client_init(struct tls13_ctx *ctx)
 		SSLerror(s, SSL_R_NO_PROTOCOLS_AVAILABLE);
 		return 0;
 	}
-	s->client_version = s->version = ctx->hs->our_max_tls_version;
+	s->version = ctx->hs->our_max_tls_version;
 
 	tls13_record_layer_set_retry_after_phh(ctx->rl,
 	    (s->internal->mode & SSL_MODE_AUTO_RETRY) != 0);
@@ -51,9 +51,9 @@ tls13_client_init(struct tls13_ctx *ctx)
 	tls1_get_group_list(s, 0, &groups, &groups_len);
 	if (groups_len < 1)
 		return 0;
-	if ((ctx->hs->tls13.key_share = tls13_key_share_new(groups[0])) == NULL)
+	if ((ctx->hs->key_share = tls_key_share_new(groups[0])) == NULL)
 		return 0;
-	if (!tls13_key_share_generate(ctx->hs->tls13.key_share))
+	if (!tls_key_share_generate(ctx->hs->key_share))
 		return 0;
 
 	arc4random_buf(s->s3->client_random, SSL3_RANDOM_SIZE);
@@ -92,9 +92,8 @@ tls13_client_hello_build(struct tls13_ctx *ctx, CBB *cbb)
 	SSL *s = ctx->ssl;
 
 	/* Legacy client version is capped at TLS 1.2. */
-	client_version = ctx->hs->our_max_tls_version;
-	if (client_version > TLS1_2_VERSION)
-		client_version = TLS1_2_VERSION;
+	if (!ssl_max_legacy_version(s, &client_version))
+		goto err;
 
 	if (!CBB_add_u16(cbb, client_version))
 		goto err;
@@ -282,6 +281,7 @@ tls13_server_hello_process(struct tls13_ctx *ctx, CBS *cbs)
 		goto err;
 	}
 	ctx->hs->negotiated_tls_version = ctx->hs->tls13.server_version;
+	ctx->hs->peer_legacy_version = legacy_version;
 
 	/* The session_id must match. */
 	if (!CBS_mem_equal(&session_id, ctx->hs->tls13.legacy_session_id,
@@ -343,7 +343,7 @@ tls13_client_engage_record_protection(struct tls13_ctx *ctx)
 
 	/* Derive the shared key and engage record protection. */
 
-	if (!tls13_key_share_derive(ctx->hs->tls13.key_share, &shared_key,
+	if (!tls_key_share_derive(ctx->hs->key_share, &shared_key,
 	    &shared_key_len))
 		goto err;
 
@@ -442,15 +442,15 @@ tls13_client_hello_retry_send(struct tls13_ctx *ctx, CBB *cbb)
 	 */
 	if (!tls1_check_curve(ctx->ssl, ctx->hs->tls13.server_group))
 		return 0; /* XXX alert */
-	if (ctx->hs->tls13.server_group == tls13_key_share_group(ctx->hs->tls13.key_share))
+	if (ctx->hs->tls13.server_group == tls_key_share_group(ctx->hs->key_share))
 		return 0; /* XXX alert */
 
 	/* Switch to new key share. */
-	tls13_key_share_free(ctx->hs->tls13.key_share);
-	if ((ctx->hs->tls13.key_share =
-	    tls13_key_share_new(ctx->hs->tls13.server_group)) == NULL)
+	tls_key_share_free(ctx->hs->key_share);
+	if ((ctx->hs->key_share =
+	    tls_key_share_new(ctx->hs->tls13.server_group)) == NULL)
 		return 0;
-	if (!tls13_key_share_generate(ctx->hs->tls13.key_share))
+	if (!tls_key_share_generate(ctx->hs->key_share))
 		return 0;
 
 	if (!tls13_client_hello_build(ctx, cbb))
@@ -561,7 +561,7 @@ tls13_server_certificate_recv(struct tls13_ctx *ctx, CBS *cbs)
 	X509 *cert = NULL;
 	EVP_PKEY *pkey;
 	const uint8_t *p;
-	int cert_idx, alert_desc;
+	int alert_desc, cert_type;
 	int ret = 0;
 
 	if ((certs = sk_X509_new_null()) == NULL)
@@ -625,25 +625,19 @@ tls13_server_certificate_recv(struct tls13_ctx *ctx, CBS *cbs)
 		goto err;
 	if (EVP_PKEY_missing_parameters(pkey))
 		goto err;
-	if ((cert_idx = ssl_cert_type(cert, pkey)) < 0)
+	if ((cert_type = ssl_cert_type(pkey)) < 0)
 		goto err;
 
-	ssl_sess_cert_free(SSI(s)->sess_cert);
-	if ((SSI(s)->sess_cert = ssl_sess_cert_new()) == NULL)
-		goto err;
-
-	SSI(s)->sess_cert->cert_chain = certs;
-	certs = NULL;
-
 	X509_up_ref(cert);
-	SSI(s)->sess_cert->peer_pkeys[cert_idx].x509 = cert;
-	SSI(s)->sess_cert->peer_key = &(SSI(s)->sess_cert->peer_pkeys[cert_idx]);
+	X509_free(s->session->peer_cert);
+	s->session->peer_cert = cert;
+	s->session->peer_cert_type = cert_type;
 
-	X509_free(s->session->peer);
-
-	X509_up_ref(cert);
-	s->session->peer = cert;
 	s->session->verify_result = s->verify_result;
+
+	sk_X509_pop_free(s->session->cert_chain, X509_free);
+	s->session->cert_chain = certs;
+	certs = NULL;
 
 	if (ctx->ocsp_status_recv_cb != NULL &&
 	    !ctx->ocsp_status_recv_cb(ctx))
@@ -696,7 +690,7 @@ tls13_server_certificate_verify_recv(struct tls13_ctx *ctx, CBS *cbs)
 	if (!CBB_finish(&cbb, &sig_content, &sig_content_len))
 		goto err;
 
-	if ((cert = ctx->ssl->session->peer) == NULL)
+	if ((cert = ctx->ssl->session->peer_cert) == NULL)
 		goto err;
 	if ((pkey = X509_get0_pubkey(cert)) == NULL)
 		goto err;
@@ -828,7 +822,7 @@ tls13_server_finished_recv(struct tls13_ctx *ctx, CBS *cbs)
 }
 
 static int
-tls13_client_check_certificate(struct tls13_ctx *ctx, CERT_PKEY *cpk,
+tls13_client_check_certificate(struct tls13_ctx *ctx, SSL_CERT_PKEY *cpk,
     int *ok, const struct ssl_sigalg **out_sigalg)
 {
 	const struct ssl_sigalg *sigalg;
@@ -851,12 +845,12 @@ tls13_client_check_certificate(struct tls13_ctx *ctx, CERT_PKEY *cpk,
 }
 
 static int
-tls13_client_select_certificate(struct tls13_ctx *ctx, CERT_PKEY **out_cpk,
+tls13_client_select_certificate(struct tls13_ctx *ctx, SSL_CERT_PKEY **out_cpk,
     const struct ssl_sigalg **out_sigalg)
 {
 	SSL *s = ctx->ssl;
 	const struct ssl_sigalg *sigalg;
-	CERT_PKEY *cpk;
+	SSL_CERT_PKEY *cpk;
 	int cert_ok;
 
 	*out_cpk = NULL;
@@ -897,7 +891,7 @@ tls13_client_certificate_send(struct tls13_ctx *ctx, CBB *cbb)
 	CBB cert_request_context, cert_list;
 	const struct ssl_sigalg *sigalg;
 	STACK_OF(X509) *chain;
-	CERT_PKEY *cpk;
+	SSL_CERT_PKEY *cpk;
 	X509 *cert;
 	int i, ret = 0;
 
@@ -948,7 +942,7 @@ tls13_client_certificate_verify_send(struct tls13_ctx *ctx, CBB *cbb)
 	EVP_MD_CTX *mdctx = NULL;
 	EVP_PKEY_CTX *pctx;
 	EVP_PKEY *pkey;
-	const CERT_PKEY *cpk;
+	const SSL_CERT_PKEY *cpk;
 	CBB sig_cbb;
 	int ret = 0;
 

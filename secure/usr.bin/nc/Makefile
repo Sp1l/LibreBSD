@@ -4,12 +4,22 @@
 
 PROG=	nc
 SRCS=	netcat.c atomicio.c socks.c
-LIBADD+= tls ssl crypto
+##LibreBSD: FreeBSD doesn't use LDADD
+LIBADD= tls ssl crypto
 
 # Reset man-dir set for LibreSSL
 MANDIR=	${SHAREDIR}/man/man
 MAN1=	nc.1
 
-.PATH:	${LIBRESSL_SRC}/apps/nc
+## LibreSSL compat
+SRCS+=	base64.c socket.c
+CFLAGS+= -I${LIBRESSL_SRC}/apps/nc/compat
+# readpassphrase.h
+CFLAGS+=	-DHAVE_READPASSPHRASE_H
+# sys/socket.h
+CFLAGS+=	-DHAVE_ACCEPT4
+
+.PATH:	${LIBRESSL_SRC}/apps/nc \
+	${LIBRESSL_SRC}/apps/nc/compat
 
 .include <bsd.prog.mk>

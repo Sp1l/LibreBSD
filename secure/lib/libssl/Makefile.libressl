@@ -1,7 +1,7 @@
-# $OpenBSD: Makefile,v 1.71 2021/09/04 16:26:12 jsing Exp $
+# $OpenBSD: Makefile,v 1.77 2022/08/17 07:39:19 jsing Exp $
 
 LIB=	ssl
-SHLIB_MAJOR=	52
+SHLIB_MAJOR=	53
 
 NO_LINT=
 
@@ -67,6 +67,7 @@ SRCS= \
 	ssl_packet.c \
 	ssl_pkt.c \
 	ssl_rsa.c \
+	ssl_seclevel.c \
 	ssl_sess.c \
 	ssl_sigalgs.c \
 	ssl_srvr.c \
@@ -87,12 +88,15 @@ SRCS= \
 	tls13_key_schedule.c \
 	tls13_legacy.c \
 	tls13_lib.c \
+	tls13_quic.c \
 	tls13_record.c \
 	tls13_record_layer.c \
 	tls13_server.c \
 	tls_buffer.c \
 	tls_content.c \
-	tls_key_share.c
+	tls_key_share.c \
+	tls_lib.c
+
 
 ##LibreBSD: Add generated headers
 INCS=	dtls1.h srtp.h ssl.h ssl2.h ssl23.h ssl3.h tls1.h

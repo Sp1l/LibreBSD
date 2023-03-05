@@ -14,12 +14,11 @@ MAN= 	tls_accept_socket.3 \
 	tls_ocsp_process_response.3 \
 	tls_read.3
 
-MLINKS+=\
+MLINKS= \
 	tls_accept_socket.3 tls_accept_cbs.3 \
 	tls_accept_socket.3 tls_accept_fds.3 \
 	tls_client.3 tls_configure.3 \
 	tls_client.3 tls_free.3 \
-	tls_client.3 tls_reset.3 \
 	tls_client.3 tls_server.3 \
 	tls_config_set_protocols.3 tls_config_parse_protocols.3 \
 	tls_config_set_protocols.3 tls_config_prefer_ciphers_client.3 \
@@ -92,4 +91,4 @@ MLINKS+=\
 	tls_read.3 tls_handshake.3 \
 	tls_read.3 tls_reset.3 \
 	tls_read.3 tls_write.3
-
+ 

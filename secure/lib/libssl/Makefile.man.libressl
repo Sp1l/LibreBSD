@@ -250,6 +250,8 @@ MLINKS+= \
 	SSL_CTX_set_info_callback.3 SSL_CTX_get_info_callback.3 \
 	SSL_CTX_set_info_callback.3 SSL_get_info_callback.3 \
 	SSL_CTX_set_info_callback.3 SSL_set_info_callback.3 \
+	SSL_CTX_set_keylog_callback.3 SSL_CTX_get_keylog_callback.3 \
+	SSL_CTX_set_keylog_callback.3 SSL_CTX_keylog_cb_func.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_CTX_get_max_cert_list.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_get_max_cert_list.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_set_max_cert_list.3 \
@@ -268,6 +270,9 @@ MLINKS+= \
 	SSL_CTX_set_msg_callback.3 SSL_CTX_set_msg_callback_arg.3 \
 	SSL_CTX_set_msg_callback.3 SSL_set_msg_callback.3 \
 	SSL_CTX_set_msg_callback.3 SSL_set_msg_callback_arg.3 \
+	SSL_CTX_set_num_tickets.3 SSL_CTX_get_num_tickets.3 \
+	SSL_CTX_set_num_tickets.3 SSL_get_num_tickets.3 \
+	SSL_CTX_set_num_tickets.3 SSL_set_num_tickets.3 \
 	SSL_CTX_set_options.3 SSL_CTX_clear_options.3 \
 	SSL_CTX_set_options.3 SSL_CTX_get_options.3 \
 	SSL_CTX_set_options.3 SSL_clear_options.3 \
@@ -281,6 +286,9 @@ MLINKS+= \
 	SSL_CTX_set_read_ahead.3 SSL_CTX_get_read_ahead.3 \
 	SSL_CTX_set_read_ahead.3 SSL_get_read_ahead.3 \
 	SSL_CTX_set_read_ahead.3 SSL_set_read_ahead.3 \
+	SSL_CTX_set_security_level.3 SSL_CTX_get_security_level.3 \
+	SSL_CTX_set_security_level.3 SSL_get_security_level.3 \
+	SSL_CTX_set_security_level.3 SSL_set_security_level.3 \
 	SSL_CTX_set_session_cache_mode.3 SSL_CTX_get_session_cache_mode.3 \
 	SSL_CTX_set_session_id_context.3 SSL_set_session_id_context.3 \
 	SSL_CTX_set_ssl_version.3 SSL_CTX_get_ssl_method.3 \
@@ -388,6 +396,16 @@ MLINKS+= \
 	SSL_num_renegotiations.3 SSL_clear_num_renegotiations.3 \
 	SSL_num_renegotiations.3 SSL_total_renegotiations.3 \
 	SSL_read.3 SSL_peek.3 \
+	SSL_read.3 SSL_peek_ex.3 \
+	SSL_read.3 SSL_read_ex.3 \
+	SSL_read_early_data.3 SSL_CTX_get_max_early_data.3 \
+	SSL_read_early_data.3 SSL_CTX_set_max_early_data.3 \
+	SSL_read_early_data.3 SSL_SESSION_get_max_early_data.3 \
+	SSL_read_early_data.3 SSL_SESSION_set_max_early_data.3 \
+	SSL_read_early_data.3 SSL_get_early_data_status.3 \
+	SSL_read_early_data.3 SSL_get_max_early_data.3 \
+	SSL_read_early_data.3 SSL_set_max_early_data.3 \
+	SSL_read_early_data.3 SSL_write_early_data.3 \
 	SSL_renegotiate.3 SSL_renegotiate_abbreviated.3 \
 	SSL_renegotiate.3 SSL_renegotiate_pending.3 \
 	SSL_rstate_string.3 SSL_rstate_string_long.3 \
@@ -401,6 +419,7 @@ MLINKS+= \
 	SSL_set_fd.3 SSL_set_rfd.3 \
 	SSL_set_fd.3 SSL_set_wfd.3 \
 	SSL_set_max_send_fragment.3 SSL_CTX_set_max_send_fragment.3 \
+	SSL_set_psk_use_session_callback.3 SSL_psk_use_session_cb_func.3 \
 	SSL_set_shutdown.3 SSL_get_shutdown.3 \
 	SSL_set_tmp_ecdh.3 SSL_CTX_set_ecdh_auto.3 \
 	SSL_set_tmp_ecdh.3 SSL_CTX_set_tmp_ecdh.3 \
@@ -412,5 +431,6 @@ MLINKS+= \
 	SSL_want.3 SSL_want_read.3 \
 	SSL_want.3 SSL_want_write.3 \
 	SSL_want.3 SSL_want_x509_lookup.3 \
+	SSL_write.3 SSL_write_ex.3 \
 	d2i_SSL_SESSION.3 i2d_SSL_SESSION.3
 

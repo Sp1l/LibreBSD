@@ -17,7 +17,7 @@ CFLAGS+= -Werror
 .endif
 
 LIB=	tls
-SHLIB_MAJOR=	25
+SHLIB_MAJOR=	26
 
 ##LibreBSD: FreeBSD doesn't use DPADD / LDADD
 LIBADD= crypto ssl

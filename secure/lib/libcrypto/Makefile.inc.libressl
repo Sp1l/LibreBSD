@@ -21,7 +21,7 @@ CFLAGS+=	-D_FORTIFY_SOURCE=2
 # include/compat/arpa/nameser.h
 CFLAGS+=	-DHAVE_ARPA_NAMESER_H=1
 # include/compat/endian.h
-CFLAGS+= -DHAVE_MACHINE_ENDIAN_H=1
+CFLAGS+= -DHAVE_ENDIAN_H=1
 # include/compat/err.h
 CFLAGS+=	-DHAVE_ERR_H=1
 # include/compat/netinet/ip.h

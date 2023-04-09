@@ -96,7 +96,7 @@ TESTS = aeadtest.sh aes_test$(EXEEXT) aes_wrap$(EXEEXT) \
 	asn1time$(EXEEXT) asn1x509$(EXEEXT) base64test$(EXEEXT) \
 	bf_test$(EXEEXT) bio_chain$(EXEEXT) $(am__EXEEXT_2) \
 	bio_mem$(EXEEXT) bn_add_sub$(EXEEXT) bn_cmp$(EXEEXT) \
-	bn_isqrt$(EXEEXT) bn_mod_exp$(EXEEXT) bn_mod_exp_zero$(EXEEXT) \
+	bn_isqrt$(EXEEXT) bn_mod_exp$(EXEEXT) \
 	bn_mod_exp2_mont$(EXEEXT) bn_mod_sqrt$(EXEEXT) \
 	bn_mont$(EXEEXT) bn_primes$(EXEEXT) bn_rand_interval$(EXEEXT) \
 	bn_shift$(EXEEXT) bn_test$(EXEEXT) bn_to_string$(EXEEXT) \
@@ -138,7 +138,7 @@ check_PROGRAMS = aeadtest$(EXEEXT) aes_test$(EXEEXT) aes_wrap$(EXEEXT) \
 	asn1time$(EXEEXT) asn1x509$(EXEEXT) base64test$(EXEEXT) \
 	bf_test$(EXEEXT) bio_chain$(EXEEXT) $(am__EXEEXT_2) \
 	bio_mem$(EXEEXT) bn_add_sub$(EXEEXT) bn_cmp$(EXEEXT) \
-	bn_isqrt$(EXEEXT) bn_mod_exp$(EXEEXT) bn_mod_exp_zero$(EXEEXT) \
+	bn_isqrt$(EXEEXT) bn_mod_exp$(EXEEXT) \
 	bn_mod_exp2_mont$(EXEEXT) bn_mod_sqrt$(EXEEXT) \
 	bn_mont$(EXEEXT) bn_primes$(EXEEXT) bn_rand_interval$(EXEEXT) \
 	bn_shift$(EXEEXT) bn_test$(EXEEXT) bn_to_string$(EXEEXT) \
@@ -356,12 +356,6 @@ am_bn_mod_exp2_mont_OBJECTS = bn_mod_exp2_mont.$(OBJEXT)
 bn_mod_exp2_mont_OBJECTS = $(am_bn_mod_exp2_mont_OBJECTS)
 bn_mod_exp2_mont_LDADD = $(LDADD)
 bn_mod_exp2_mont_DEPENDENCIES = libtest.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
-am_bn_mod_exp_zero_OBJECTS =  \
-	bn_mod_exp_zero-bn_mod_exp_zero.$(OBJEXT)
-bn_mod_exp_zero_OBJECTS = $(am_bn_mod_exp_zero_OBJECTS)
-bn_mod_exp_zero_LDADD = $(LDADD)
-bn_mod_exp_zero_DEPENDENCIES = libtest.la $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am_bn_mod_sqrt_OBJECTS = bn_mod_sqrt.$(OBJEXT)
 bn_mod_sqrt_OBJECTS = $(am_bn_mod_sqrt_OBJECTS)
@@ -843,31 +837,29 @@ am__depfiles_remade = ./$(DEPDIR)/aeadtest.Po ./$(DEPDIR)/aes_test.Po \
 	./$(DEPDIR)/bio_mem.Po ./$(DEPDIR)/bn_add_sub.Po \
 	./$(DEPDIR)/bn_cmp.Po ./$(DEPDIR)/bn_isqrt.Po \
 	./$(DEPDIR)/bn_mod_exp-bn_mod_exp.Po \
-	./$(DEPDIR)/bn_mod_exp2_mont.Po \
-	./$(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po \
-	./$(DEPDIR)/bn_mod_sqrt.Po ./$(DEPDIR)/bn_mont.Po \
-	./$(DEPDIR)/bn_primes.Po ./$(DEPDIR)/bn_rand_interval.Po \
-	./$(DEPDIR)/bn_shift.Po ./$(DEPDIR)/bn_test-bn_test.Po \
-	./$(DEPDIR)/bn_to_string.Po ./$(DEPDIR)/bn_unit.Po \
-	./$(DEPDIR)/bn_word.Po ./$(DEPDIR)/buffertest.Po \
-	./$(DEPDIR)/bytestringtest.Po ./$(DEPDIR)/casttest.Po \
-	./$(DEPDIR)/chachatest.Po ./$(DEPDIR)/cipher_list.Po \
-	./$(DEPDIR)/cipherstest.Po ./$(DEPDIR)/clienttest.Po \
-	./$(DEPDIR)/cmstest.Po ./$(DEPDIR)/configtest.Po \
-	./$(DEPDIR)/constraints.Po ./$(DEPDIR)/cts128test.Po \
-	./$(DEPDIR)/destest.Po ./$(DEPDIR)/dhtest.Po \
-	./$(DEPDIR)/dsatest.Po ./$(DEPDIR)/ec_asn1_test.Po \
-	./$(DEPDIR)/ec_point_conversion.Po ./$(DEPDIR)/ecdhtest.Po \
-	./$(DEPDIR)/ecdsatest.Po ./$(DEPDIR)/ectest.Po \
-	./$(DEPDIR)/ed25519test.Po ./$(DEPDIR)/empty.Plo \
-	./$(DEPDIR)/enginetest.Po ./$(DEPDIR)/evp_ecx_test.Po \
-	./$(DEPDIR)/evp_pkey_check.Po ./$(DEPDIR)/evp_pkey_cleanup.Po \
-	./$(DEPDIR)/evptest.Po ./$(DEPDIR)/explicit_bzero.Po \
-	./$(DEPDIR)/freenull-freenull.Po ./$(DEPDIR)/gcm128test.Po \
-	./$(DEPDIR)/gost2814789t.Po ./$(DEPDIR)/handshake_table.Po \
-	./$(DEPDIR)/hkdf_test.Po ./$(DEPDIR)/hmactest.Po \
-	./$(DEPDIR)/ideatest.Po ./$(DEPDIR)/igetest.Po \
-	./$(DEPDIR)/key_schedule.Po \
+	./$(DEPDIR)/bn_mod_exp2_mont.Po ./$(DEPDIR)/bn_mod_sqrt.Po \
+	./$(DEPDIR)/bn_mont.Po ./$(DEPDIR)/bn_primes.Po \
+	./$(DEPDIR)/bn_rand_interval.Po ./$(DEPDIR)/bn_shift.Po \
+	./$(DEPDIR)/bn_test-bn_test.Po ./$(DEPDIR)/bn_to_string.Po \
+	./$(DEPDIR)/bn_unit.Po ./$(DEPDIR)/bn_word.Po \
+	./$(DEPDIR)/buffertest.Po ./$(DEPDIR)/bytestringtest.Po \
+	./$(DEPDIR)/casttest.Po ./$(DEPDIR)/chachatest.Po \
+	./$(DEPDIR)/cipher_list.Po ./$(DEPDIR)/cipherstest.Po \
+	./$(DEPDIR)/clienttest.Po ./$(DEPDIR)/cmstest.Po \
+	./$(DEPDIR)/configtest.Po ./$(DEPDIR)/constraints.Po \
+	./$(DEPDIR)/cts128test.Po ./$(DEPDIR)/destest.Po \
+	./$(DEPDIR)/dhtest.Po ./$(DEPDIR)/dsatest.Po \
+	./$(DEPDIR)/ec_asn1_test.Po ./$(DEPDIR)/ec_point_conversion.Po \
+	./$(DEPDIR)/ecdhtest.Po ./$(DEPDIR)/ecdsatest.Po \
+	./$(DEPDIR)/ectest.Po ./$(DEPDIR)/ed25519test.Po \
+	./$(DEPDIR)/empty.Plo ./$(DEPDIR)/enginetest.Po \
+	./$(DEPDIR)/evp_ecx_test.Po ./$(DEPDIR)/evp_pkey_check.Po \
+	./$(DEPDIR)/evp_pkey_cleanup.Po ./$(DEPDIR)/evptest.Po \
+	./$(DEPDIR)/explicit_bzero.Po ./$(DEPDIR)/freenull-freenull.Po \
+	./$(DEPDIR)/gcm128test.Po ./$(DEPDIR)/gost2814789t.Po \
+	./$(DEPDIR)/handshake_table.Po ./$(DEPDIR)/hkdf_test.Po \
+	./$(DEPDIR)/hmactest.Po ./$(DEPDIR)/ideatest.Po \
+	./$(DEPDIR)/igetest.Po ./$(DEPDIR)/key_schedule.Po \
 	./$(DEPDIR)/keypairtest-keypairtest.Po ./$(DEPDIR)/md_test.Po \
 	./$(DEPDIR)/objectstest.Po ./$(DEPDIR)/ocsp_test.Po \
 	./$(DEPDIR)/optionstest.Po ./$(DEPDIR)/pbkdf2.Po \
@@ -921,8 +913,8 @@ SOURCES = $(libtest_la_SOURCES) $(aeadtest_SOURCES) \
 	$(bf_test_SOURCES) $(bio_chain_SOURCES) $(bio_host_SOURCES) \
 	$(bio_mem_SOURCES) $(bn_add_sub_SOURCES) $(bn_cmp_SOURCES) \
 	$(bn_isqrt_SOURCES) $(bn_mod_exp_SOURCES) \
-	$(bn_mod_exp2_mont_SOURCES) $(bn_mod_exp_zero_SOURCES) \
-	$(bn_mod_sqrt_SOURCES) $(bn_mont_SOURCES) $(bn_primes_SOURCES) \
+	$(bn_mod_exp2_mont_SOURCES) $(bn_mod_sqrt_SOURCES) \
+	$(bn_mont_SOURCES) $(bn_primes_SOURCES) \
 	$(bn_rand_interval_SOURCES) $(bn_shift_SOURCES) \
 	$(bn_test_SOURCES) $(bn_to_string_SOURCES) $(bn_unit_SOURCES) \
 	$(bn_word_SOURCES) $(buffertest_SOURCES) \
@@ -972,8 +964,7 @@ DIST_SOURCES = $(libtest_la_SOURCES) $(aeadtest_SOURCES) \
 	$(am__bio_host_SOURCES_DIST) $(bio_mem_SOURCES) \
 	$(bn_add_sub_SOURCES) $(bn_cmp_SOURCES) $(bn_isqrt_SOURCES) \
 	$(bn_mod_exp_SOURCES) $(bn_mod_exp2_mont_SOURCES) \
-	$(bn_mod_exp_zero_SOURCES) $(bn_mod_sqrt_SOURCES) \
-	$(bn_mont_SOURCES) $(bn_primes_SOURCES) \
+	$(bn_mod_sqrt_SOURCES) $(bn_mont_SOURCES) $(bn_primes_SOURCES) \
 	$(bn_rand_interval_SOURCES) $(bn_shift_SOURCES) \
 	$(bn_test_SOURCES) $(bn_to_string_SOURCES) $(bn_unit_SOURCES) \
 	$(bn_word_SOURCES) $(buffertest_SOURCES) \
@@ -1437,8 +1428,6 @@ bn_cmp_SOURCES = bn_cmp.c
 bn_isqrt_SOURCES = bn_isqrt.c
 bn_mod_exp_CPPFLAGS = $(AM_CPPFLAGS) -ULIBRESSL_INTERNAL
 bn_mod_exp_SOURCES = bn_mod_exp.c
-bn_mod_exp_zero_CPPFLAGS = $(AM_CPPFLAGS) -ULIBRESSL_INTERNAL
-bn_mod_exp_zero_SOURCES = bn_mod_exp_zero.c
 bn_mod_exp2_mont_SOURCES = bn_mod_exp2_mont.c
 bn_mod_sqrt_SOURCES = bn_mod_sqrt.c
 bn_mont_SOURCES = bn_mont.c
@@ -1689,10 +1678,6 @@ bn_mod_exp$(EXEEXT): $(bn_mod_exp_OBJECTS) $(bn_mod_exp_DEPENDENCIES) $(EXTRA_bn
 bn_mod_exp2_mont$(EXEEXT): $(bn_mod_exp2_mont_OBJECTS) $(bn_mod_exp2_mont_DEPENDENCIES) $(EXTRA_bn_mod_exp2_mont_DEPENDENCIES) 
 	@rm -f bn_mod_exp2_mont$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(bn_mod_exp2_mont_OBJECTS) $(bn_mod_exp2_mont_LDADD) $(LIBS)
-
-bn_mod_exp_zero$(EXEEXT): $(bn_mod_exp_zero_OBJECTS) $(bn_mod_exp_zero_DEPENDENCIES) $(EXTRA_bn_mod_exp_zero_DEPENDENCIES) 
-	@rm -f bn_mod_exp_zero$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(bn_mod_exp_zero_OBJECTS) $(bn_mod_exp_zero_LDADD) $(LIBS)
 
 bn_mod_sqrt$(EXEEXT): $(bn_mod_sqrt_OBJECTS) $(bn_mod_sqrt_DEPENDENCIES) $(EXTRA_bn_mod_sqrt_DEPENDENCIES) 
 	@rm -f bn_mod_sqrt$(EXEEXT)
@@ -2087,7 +2072,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_isqrt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_mod_exp-bn_mod_exp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_mod_exp2_mont.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_mod_sqrt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_mont.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bn_primes.Po@am__quote@ # am--include-marker
@@ -2223,20 +2207,6 @@ bn_mod_exp-bn_mod_exp.obj: bn_mod_exp.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bn_mod_exp.c' object='bn_mod_exp-bn_mod_exp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_mod_exp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bn_mod_exp-bn_mod_exp.obj `if test -f 'bn_mod_exp.c'; then $(CYGPATH_W) 'bn_mod_exp.c'; else $(CYGPATH_W) '$(srcdir)/bn_mod_exp.c'; fi`
-
-bn_mod_exp_zero-bn_mod_exp_zero.o: bn_mod_exp_zero.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_mod_exp_zero_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bn_mod_exp_zero-bn_mod_exp_zero.o -MD -MP -MF $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Tpo -c -o bn_mod_exp_zero-bn_mod_exp_zero.o `test -f 'bn_mod_exp_zero.c' || echo '$(srcdir)/'`bn_mod_exp_zero.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Tpo $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bn_mod_exp_zero.c' object='bn_mod_exp_zero-bn_mod_exp_zero.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_mod_exp_zero_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bn_mod_exp_zero-bn_mod_exp_zero.o `test -f 'bn_mod_exp_zero.c' || echo '$(srcdir)/'`bn_mod_exp_zero.c
-
-bn_mod_exp_zero-bn_mod_exp_zero.obj: bn_mod_exp_zero.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_mod_exp_zero_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bn_mod_exp_zero-bn_mod_exp_zero.obj -MD -MP -MF $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Tpo -c -o bn_mod_exp_zero-bn_mod_exp_zero.obj `if test -f 'bn_mod_exp_zero.c'; then $(CYGPATH_W) 'bn_mod_exp_zero.c'; else $(CYGPATH_W) '$(srcdir)/bn_mod_exp_zero.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Tpo $(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bn_mod_exp_zero.c' object='bn_mod_exp_zero-bn_mod_exp_zero.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_mod_exp_zero_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bn_mod_exp_zero-bn_mod_exp_zero.obj `if test -f 'bn_mod_exp_zero.c'; then $(CYGPATH_W) 'bn_mod_exp_zero.c'; else $(CYGPATH_W) '$(srcdir)/bn_mod_exp_zero.c'; fi`
 
 bn_test-bn_test.o: bn_test.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bn_test_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bn_test-bn_test.o -MD -MP -MF $(DEPDIR)/bn_test-bn_test.Tpo -c -o bn_test-bn_test.o `test -f 'bn_test.c' || echo '$(srcdir)/'`bn_test.c
@@ -2664,13 +2634,6 @@ bn_isqrt.log: bn_isqrt$(EXEEXT)
 bn_mod_exp.log: bn_mod_exp$(EXEEXT)
 	@p='bn_mod_exp$(EXEEXT)'; \
 	b='bn_mod_exp'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
-bn_mod_exp_zero.log: bn_mod_exp_zero$(EXEEXT)
-	@p='bn_mod_exp_zero$(EXEEXT)'; \
-	b='bn_mod_exp_zero'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3438,7 +3401,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/bn_isqrt.Po
 	-rm -f ./$(DEPDIR)/bn_mod_exp-bn_mod_exp.Po
 	-rm -f ./$(DEPDIR)/bn_mod_exp2_mont.Po
-	-rm -f ./$(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po
 	-rm -f ./$(DEPDIR)/bn_mod_sqrt.Po
 	-rm -f ./$(DEPDIR)/bn_mont.Po
 	-rm -f ./$(DEPDIR)/bn_primes.Po
@@ -3599,7 +3561,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/bn_isqrt.Po
 	-rm -f ./$(DEPDIR)/bn_mod_exp-bn_mod_exp.Po
 	-rm -f ./$(DEPDIR)/bn_mod_exp2_mont.Po
-	-rm -f ./$(DEPDIR)/bn_mod_exp_zero-bn_mod_exp_zero.Po
 	-rm -f ./$(DEPDIR)/bn_mod_sqrt.Po
 	-rm -f ./$(DEPDIR)/bn_mont.Po
 	-rm -f ./$(DEPDIR)/bn_primes.Po

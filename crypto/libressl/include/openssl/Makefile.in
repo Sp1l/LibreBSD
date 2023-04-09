@@ -616,6 +616,7 @@ uninstall-am: uninstall-opensslincludeHEADERS
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_AARCH64_TRUE@	-cp $(top_srcdir)/include/arch/aarch64/opensslconf.h opensslconf.h
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_ARM_TRUE@	-cp $(top_srcdir)/include/arch/arm/opensslconf.h opensslconf.h
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_I386_TRUE@	-cp $(top_srcdir)/include/arch/i386/opensslconf.h opensslconf.h
+@ENABLE_LIBTLS_ONLY_FALSE@@HOST_MIPS_TRUE@	-cp $(top_srcdir)/include/arch/mips/opensslconf.h opensslconf.h
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_MIPS64_TRUE@	-cp $(top_srcdir)/include/arch/mips64/opensslconf.h opensslconf.h
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_POWERPC_TRUE@	-cp $(top_srcdir)/include/arch/powerpc/opensslconf.h opensslconf.h
 @ENABLE_LIBTLS_ONLY_FALSE@@HOST_POWERPC64_TRUE@	-cp $(top_srcdir)/include/arch/powerpc64/opensslconf.h opensslconf.h

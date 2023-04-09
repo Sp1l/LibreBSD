@@ -364,9 +364,10 @@ noinst_HEADERS = pqueue.h compat/dirent.h compat/dirent_msvc.h \
 	arch/alpha/opensslconf.h arch/amd64/opensslconf.h \
 	arch/arm/opensslconf.h arch/hppa/opensslconf.h \
 	arch/i386/opensslconf.h arch/m88k/opensslconf.h \
-	arch/mips64/opensslconf.h arch/powerpc/opensslconf.h \
-	arch/powerpc64/opensslconf.h arch/riscv64/opensslconf.h \
-	arch/sh/opensslconf.h arch/sparc64/opensslconf.h
+	arch/mips/opensslconf.h arch/mips64/opensslconf.h \
+	arch/powerpc/opensslconf.h arch/powerpc64/opensslconf.h \
+	arch/riscv64/opensslconf.h arch/sh/opensslconf.h \
+	arch/sparc64/opensslconf.h
 include_HEADERS = tls.h
 all: all-recursive
 

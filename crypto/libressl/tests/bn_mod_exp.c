@@ -1,79 +1,188 @@
-/*	$OpenBSD: bn_mod_exp.c,v 1.12 2023/03/15 04:26:23 jsing Exp $	*/
-/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
- * All rights reserved.
+/*	$OpenBSD: bn_mod_exp.c,v 1.15 2023/03/18 13:04:02 tb Exp $ */
+
+/*
+ * Copyright (c) 2022,2023 Theo Buehler <tb@openbsd.org>
  *
- * This package is an SSL implementation written
- * by Eric Young (eay@cryptsoft.com).
- * The implementation was written so as to conform with Netscapes SSL.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * This library is free for commercial and non-commercial use as long as
- * the following conditions are aheared to.  The following conditions
- * apply to all code found in this distribution, be it the RC4, RSA,
- * lhash, DES, etc., code; not just the SSL code.  The SSL documentation
- * included with this distribution is covered by the same copyright terms
- * except that the holder is Tim Hudson (tjh@cryptsoft.com).
- *
- * Copyright remains Eric Young's, and as such any Copyright notices in
- * the code are not to be removed.
- * If this package is used in a product, Eric Young should be given attribution
- * as the author of the parts of the library used.
- * This can be in the form of a textual message at program startup or
- * in documentation (online or textual) provided with the package.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    "This product includes cryptographic software written by
- *     Eric Young (eay@cryptsoft.com)"
- *    The word 'cryptographic' can be left out if the rouines from the library
- *    being used are not cryptographic related :-).
- * 4. If you include any Windows specific code (or a derivative thereof) from
- *    the apps directory (application code) you must include an acknowledgement:
- *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
- *
- * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * The licence and distribution terms for any publically available version or
- * derivative of this code cannot be changed.  i.e. this code cannot simply be
- * copied and put under another distribution licence
- * [including the GNU Public Licence.]
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <err.h>
 
 #include <openssl/bn.h>
 #include <openssl/err.h>
 
 #include "bn_local.h"
 
-#define NUM_BITS	(BN_BITS*2)
-
 #define INIT_MOD_EXP_FN(f) { .name = #f, .mod_exp_fn = (f), }
 #define INIT_MOD_EXP_MONT_FN(f) { .name = #f, .mod_exp_mont_fn = (f), }
 
+static const struct mod_exp_zero_test {
+	const char *name;
+	int (*mod_exp_fn)(BIGNUM *, const BIGNUM *, const BIGNUM *,
+	    const BIGNUM *, BN_CTX *);
+	int (*mod_exp_mont_fn)(BIGNUM *, const BIGNUM *, const BIGNUM *,
+	    const BIGNUM *, BN_CTX *, BN_MONT_CTX *);
+} mod_exp_zero_test_data[] = {
+	INIT_MOD_EXP_FN(BN_mod_exp),
+	INIT_MOD_EXP_FN(BN_mod_exp_ct),
+	INIT_MOD_EXP_FN(BN_mod_exp_nonct),
+	INIT_MOD_EXP_FN(BN_mod_exp_recp),
+	INIT_MOD_EXP_FN(BN_mod_exp_simple),
+	INIT_MOD_EXP_MONT_FN(BN_mod_exp_mont),
+	INIT_MOD_EXP_MONT_FN(BN_mod_exp_mont_ct),
+	INIT_MOD_EXP_MONT_FN(BN_mod_exp_mont_consttime),
+	INIT_MOD_EXP_MONT_FN(BN_mod_exp_mont_nonct),
+};
+
+#define N_MOD_EXP_ZERO_TESTS \
+    (sizeof(mod_exp_zero_test_data) / sizeof(mod_exp_zero_test_data[0]))
+
+static void
+print_failure(const BIGNUM *got, const BIGNUM *a, const char *name)
+{
+	fprintf(stderr, "%s test failed for a = ", name);
+	BN_print_fp(stderr, a);
+	fprintf(stderr, "\nwant 0, got ");
+	BN_print_fp(stderr, got);
+	fprintf(stderr, "\n");
+}
+
+static int
+bn_mod_exp_zero_test(const struct mod_exp_zero_test *test, BN_CTX *ctx,
+    int use_random)
+{
+	const BIGNUM *one;
+	BIGNUM *a, *p, *got;
+	int failed = 1;
+
+	BN_CTX_start(ctx);
+
+	if ((a = BN_CTX_get(ctx)) == NULL)
+		errx(1, "BN_CTX_get");
+	if ((p = BN_CTX_get(ctx)) == NULL)
+		errx(1, "BN_CTX_get");
+	if ((got = BN_CTX_get(ctx)) == NULL)
+		errx(1, "BN_CTX_get");
+
+	one = BN_value_one();
+	BN_zero(a);
+	BN_zero(p);
+
+	if (use_random) {
+		if (!BN_rand(a, 1024, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY))
+			errx(1, "BN_rand");
+	}
+
+	if (test->mod_exp_fn != NULL) {
+		if (!test->mod_exp_fn(got, a, p, one, ctx)) {
+			fprintf(stderr, "%s failed\n", test->name);
+			ERR_print_errors_fp(stderr);
+			goto err;
+		}
+	} else {
+		if (!test->mod_exp_mont_fn(got, a, p, one, ctx, NULL)) {
+			fprintf(stderr, "%s failed\n", test->name);
+			ERR_print_errors_fp(stderr);
+			goto err;
+		}
+	}
+
+	if (!BN_is_zero(got)) {
+		print_failure(got, a, test->name);
+		goto err;
+	}
+
+	failed = 0;
+
+ err:
+	BN_CTX_end(ctx);
+
+	return failed;
+}
+
+static int
+bn_mod_exp_zero_word_test(BN_CTX *ctx)
+{
+	const char *name = "BN_mod_exp_mont_word";
+	const BIGNUM *one;
+	BIGNUM *p, *got;
+	int failed = 1;
+
+	BN_CTX_start(ctx);
+
+	if ((p = BN_CTX_get(ctx)) == NULL)
+		errx(1, "BN_CTX_get");
+	if ((got = BN_CTX_get(ctx)) == NULL)
+		errx(1, "BN_CTX_get");
+
+	one = BN_value_one();
+	BN_zero(p);
+
+	if (!BN_mod_exp_mont_word(got, 1, p, one, ctx, NULL)) {
+		fprintf(stderr, "%s failed\n", name);
+		ERR_print_errors_fp(stderr);
+		goto err;
+	}
+
+	if (!BN_is_zero(got)) {
+		print_failure(got, one, name);
+		goto err;
+	}
+
+	failed = 0;
+
+ err:
+	BN_CTX_end(ctx);
+
+	return failed;
+}
+
+static int
+run_bn_mod_exp_zero_tests(void)
+{
+	BN_CTX *ctx;
+	size_t i;
+	int use_random;
+	int failed = 0;
+
+	if ((ctx = BN_CTX_new()) == NULL)
+		errx(1, "BN_CTX_new");
+
+	use_random = 1;
+	for (i = 0; i < N_MOD_EXP_ZERO_TESTS; i++)
+		failed |= bn_mod_exp_zero_test(&mod_exp_zero_test_data[i], ctx,
+		    use_random);
+
+	use_random = 0;
+	for (i = 0; i < N_MOD_EXP_ZERO_TESTS; i++)
+		failed |= bn_mod_exp_zero_test(&mod_exp_zero_test_data[i], ctx,
+		    use_random);
+
+	failed |= bn_mod_exp_zero_word_test(ctx);
+
+	BN_CTX_free(ctx);
+
+	return failed;
+}
+
+#define N_MOD_EXP_TESTS	400
+
 static const struct mod_exp_test {
 	const char *name;
-	int (*mod_exp_fn)(BIGNUM *,const BIGNUM *, const BIGNUM *,
+	int (*mod_exp_fn)(BIGNUM *, const BIGNUM *, const BIGNUM *,
 	    const BIGNUM *, BN_CTX *);
-	int (*mod_exp_mont_fn)(BIGNUM *,const BIGNUM *, const BIGNUM *,
+	int (*mod_exp_mont_fn)(BIGNUM *, const BIGNUM *, const BIGNUM *,
 	    const BIGNUM *, BN_CTX *, BN_MONT_CTX *);
 } mod_exp_fn[] = {
 	INIT_MOD_EXP_FN(BN_mod_exp),
@@ -89,54 +198,107 @@ static const struct mod_exp_test {
 #define N_MOD_EXP_FN (sizeof(mod_exp_fn) / sizeof(mod_exp_fn[0]))
 
 static int
-rand_neg(void)
+generate_bn(BIGNUM *bn, int avg_bits, int deviate, int force_odd)
 {
-	static unsigned int neg = 0;
-	static int sign[8] = { 0, 0, 0, 1, 1, 0, 1, 1 };
+	int bits;
 
-	return (sign[(neg++) % 8]);
+	if (avg_bits <= 0 || deviate <= 0 || deviate >= avg_bits)
+		return 0;
+
+	bits = avg_bits + arc4random_uniform(deviate) - deviate;
+
+	return BN_rand(bn, bits, 0, force_odd);
 }
 
 static int
-test_mod_exp(const BIGNUM *result_simple, const BIGNUM *a, const BIGNUM *b,
+generate_test_triple(int reduce, BIGNUM *a, BIGNUM *p, BIGNUM *m, BN_CTX *ctx)
+{
+	BIGNUM *mmodified;
+	BN_ULONG multiple;
+	int avg = 2 * BN_BITS, deviate = BN_BITS / 2;
+	int ret = 0;
+
+	if (!generate_bn(a, avg, deviate, 0))
+		return 0;
+
+	if (!generate_bn(p, avg, deviate, 0))
+		return 0;
+
+	if (!generate_bn(m, avg, deviate, 1))
+		return 0;
+
+	if (reduce)
+		return BN_mod(a, a, m, ctx);
+
+	/*
+	 * Add a random multiple of m to a to test unreduced exponentiation.
+	 */
+
+	BN_CTX_start(ctx);
+
+	if ((mmodified = BN_CTX_get(ctx)) == NULL)
+		goto err;
+
+	if (BN_copy(mmodified, m) == NULL)
+		goto err;
+
+	multiple = arc4random_uniform(1023) + 2;
+
+	if (!BN_mul_word(mmodified, multiple))
+		goto err;
+
+	if (!BN_add(a, a, mmodified))
+		goto err;
+
+	ret = 1;
+ err:
+	BN_CTX_end(ctx);
+
+	return ret;
+}
+
+static void
+dump_results(const BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
+    const BIGNUM *got, const BIGNUM *want, const char *name)
+{
+	printf("BN_mod_exp_simple() and %s() disagree", name);
+
+	printf("\nwant: ");
+	BN_print_fp(stdout, want);
+	printf("\ngot:  ");
+	BN_print_fp(stdout, got);
+
+	printf("\na: ");
+	BN_print_fp(stdout, a);
+	printf("\nb: ");
+	BN_print_fp(stdout, p);
+	printf("\nm: ");
+	BN_print_fp(stdout, m);
+	printf("\n\n");
+}
+
+static int
+test_mod_exp(const BIGNUM *want, const BIGNUM *a, const BIGNUM *p,
     const BIGNUM *m, BN_CTX *ctx, const struct mod_exp_test *test)
 {
-	BIGNUM *result;
+	BIGNUM *got;
 	int ret = 0;
 
 	BN_CTX_start(ctx);
 
-	if ((result = BN_CTX_get(ctx)) == NULL)
+	if ((got = BN_CTX_get(ctx)) == NULL)
 		goto err;
 
-	if (test->mod_exp_fn != NULL) {
-		if (!test->mod_exp_fn(result, a, b, m, ctx)) {
-			printf("%s() problems\n", test->name);
-			goto err;
-		}
-	} else {
-		if (!test->mod_exp_mont_fn(result, a, b, m, ctx, NULL)) {
-			printf("%s() problems\n", test->name);
-			goto err;
-		}
-	}
+	if (test->mod_exp_fn != NULL)
+		ret = test->mod_exp_fn(got, a, p, m, ctx);
+	else
+		ret = test->mod_exp_mont_fn(got, a, p, m, ctx, NULL);
 
-	if (BN_cmp(result_simple, result) != 0) {
-		printf("\nResults from BN_mod_exp_simple and %s differ\n",
-		    test->name);
+	if (!ret)
+		errx(1, "%s() failed", test->name);
 
-		printf("a (%3d) = ", BN_num_bits(a));
-		BN_print_fp(stdout, a);
-		printf("\nb (%3d) = ", BN_num_bits(b));
-		BN_print_fp(stdout, b);
-		printf("\nm (%3d) = ", BN_num_bits(m));
-		BN_print_fp(stdout, m);
-		printf("\nsimple = ");
-		BN_print_fp(stdout, result_simple);
-		printf("\nresult = ");
-		BN_print_fp(stdout, result);
-		printf("\n");
-
+	if (BN_cmp(want, got) != 0) {
+		dump_results(a, p, m, want, got, test->name);
 		goto err;
 	}
 
@@ -148,72 +310,78 @@ test_mod_exp(const BIGNUM *result_simple, const BIGNUM *a, const BIGNUM *b,
 	return ret;
 }
 
-int
-main(int argc, char *argv[])
+static int
+bn_mod_exp_test(int reduce, BIGNUM *want, BIGNUM *a, BIGNUM *p, BIGNUM *m,
+    BN_CTX *ctx)
 {
-	BIGNUM *result_simple, *a, *b, *m;
-	BN_CTX *ctx;
-	int c, i;
-	size_t j;
+	size_t i, j;
+	int failed = 0;
 
-	if ((ctx = BN_CTX_new()) == NULL)
-		goto err;
+	if (!generate_test_triple(reduce, a, p, m, ctx))
+		errx(1, "generate_test_triple");
 
-	BN_CTX_start(ctx);
+	for (i = 0; i < 4; i++) {
+		BN_set_negative(a, i & 1);
+		BN_set_negative(p, (i >> 1) & 1);
 
-	if ((a = BN_CTX_get(ctx)) == NULL)
-		goto err;
-	if ((b = BN_CTX_get(ctx)) == NULL)
-		goto err;
-	if ((m = BN_CTX_get(ctx)) == NULL)
-		goto err;
-	if ((result_simple = BN_CTX_get(ctx)) == NULL)
-		goto err;
-
-	for (i = 0; i < 1000; i++) {
-		c = arc4random() % BN_BITS - BN_BITS2;
-		if (!BN_rand(a, NUM_BITS + c, 0, 0))
-			goto err;
-
-		BN_set_negative(a, rand_neg());
-
-		c = arc4random() % BN_BITS - BN_BITS2;
-		if (!BN_rand(b, NUM_BITS + c, 0, 0))
-			goto err;
-
-		BN_set_negative(b, rand_neg());
-
-		c = arc4random() % BN_BITS - BN_BITS2;
-		if (!BN_rand(m, NUM_BITS + c, 0, 1))
-			goto err;
-
-		if (!BN_mod(a, a, m, ctx))
-			goto err;
-		if (!BN_mod(b, b, m, ctx))
-			goto err;
-
-		if ((BN_mod_exp_simple(result_simple, a, b, m, ctx)) <= 0) {
-			printf("BN_mod_exp_simple() problems\n");
-			goto err;
-		}
+		if ((BN_mod_exp_simple(want, a, p, m, ctx)) <= 0)
+			errx(1, "BN_mod_exp_simple");
 
 		for (j = 0; j < N_MOD_EXP_FN; j++) {
 			const struct mod_exp_test *test = &mod_exp_fn[j];
 
-			if (!test_mod_exp(result_simple, a, b, m, ctx, test))
-				goto err;
+			if (!test_mod_exp(want, a, p, m, ctx, test))
+				failed |= 1;
 		}
 	}
 
+	return failed;
+}
+
+static int
+run_bn_mod_exp_tests(void)
+{
+	BIGNUM *a, *p, *m, *want;
+	BN_CTX *ctx;
+	int i;
+	int reduce;
+	int failed = 0;
+
+	if ((ctx = BN_CTX_new()) == NULL)
+		errx(1, "BN_CTX_new");
+
+	BN_CTX_start(ctx);
+
+	if ((a = BN_CTX_get(ctx)) == NULL)
+		errx(1, "a = BN_CTX_get()");
+	if ((p = BN_CTX_get(ctx)) == NULL)
+		errx(1, "p = BN_CTX_get()");
+	if ((m = BN_CTX_get(ctx)) == NULL)
+		errx(1, "m = BN_CTX_get()");
+	if ((want = BN_CTX_get(ctx)) == NULL)
+		errx(1, "want = BN_CTX_get()");
+
+	reduce = 0;
+	for (i = 0; i < N_MOD_EXP_TESTS; i++)
+		failed |= bn_mod_exp_test(reduce, want, a, p, m, ctx);
+
+	reduce = 1;
+	for (i = 0; i < N_MOD_EXP_TESTS; i++)
+		failed |= bn_mod_exp_test(reduce, want, a, p, m, ctx);
+
 	BN_CTX_end(ctx);
 	BN_CTX_free(ctx);
 
-	return 0;
+	return failed;
+}
 
- err:
-	BN_CTX_end(ctx);
-	BN_CTX_free(ctx);
-	ERR_print_errors_fp(stdout);
+int
+main(void)
+{
+	int failed = 0;
 
-	return 1;
+	failed |= run_bn_mod_exp_zero_tests();
+	failed |= run_bn_mod_exp_tests();
+
+	return failed;
 }

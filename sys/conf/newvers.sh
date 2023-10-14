@@ -53,7 +53,7 @@
 
 TYPE="FreeBSD"
 REVISION="14.0"
-BRANCH="BETA5"
+BRANCH="RC1"
 if [ -n "${BRANCH_OVERRIDE}" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
@@ -217,15 +217,6 @@ for dir in /usr/bin /usr/local/bin; do
 		fi
 	fi
 done
-
-if [ -z "${svnversion}" ] && [ -x /usr/bin/svnliteversion ] ; then
-	/usr/bin/svnliteversion $(realpath ${0}) >/dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		svnversion=/usr/bin/svnliteversion
-	else
-		svnversion=
-	fi
-fi
 
 if findvcs .git; then
 	for dir in /usr/bin /usr/local/bin; do

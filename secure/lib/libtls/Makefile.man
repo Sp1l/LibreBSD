@@ -19,6 +19,7 @@ MLINKS= \
 	tls_accept_socket.3 tls_accept_fds.3 \
 	tls_client.3 tls_configure.3 \
 	tls_client.3 tls_free.3 \
+	tls_client.3 tls_reset.3 \
 	tls_client.3 tls_server.3 \
 	tls_config_set_protocols.3 tls_config_parse_protocols.3 \
 	tls_config_set_protocols.3 tls_config_prefer_ciphers_client.3 \

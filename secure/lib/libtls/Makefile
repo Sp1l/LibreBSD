@@ -1,4 +1,4 @@
-#	$OpenBSD: Makefile,v 1.37 2022/01/25 21:51:24 eric Exp $
+#	$OpenBSD: Makefile,v 1.38 2023/05/05 21:23:02 tb Exp $
 
 .include "../libcrypto/Makefile.inc.libressl"
 
@@ -15,9 +15,10 @@ CFLAGS+= -Wall -Wimplicit -Wundef
 .if ${COMPILER_TYPE:L} == "clang"
 CFLAGS+= -Werror
 .endif
+CFLAGS+= -DLIBRESSL_INTERNAL
 
 LIB=	tls
-SHLIB_MAJOR=	26
+SHLIB_MAJOR=	28
 
 ##LibreBSD: FreeBSD doesn't use DPADD / LDADD
 LIBADD= crypto ssl

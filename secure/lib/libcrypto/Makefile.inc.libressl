@@ -1,10 +1,9 @@
-# $FreeBSD$
 
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	3.7.3
-OPENSSL_DATE=	2023-05-27
+OPENSSL_VER=	3.8.1
+OPENSSL_DATE=	2023-08-23
 
 LIBRESSL_SRC=	${SRCTOP}/crypto/libressl
 LCRYPTO_SRC=	${LIBRESSL_SRC}/crypto
@@ -21,11 +20,14 @@ CFLAGS+=	-D_FORTIFY_SOURCE=2
 # include/compat/arpa/nameser.h
 CFLAGS+=	-DHAVE_ARPA_NAMESER_H=1
 # include/compat/endian.h
-CFLAGS+= -DHAVE_ENDIAN_H=1
+CFLAGS+=	-DHAVE_ENDIAN_H=1
+CFLAGS+=	-DHAVE_MACHINE_ENDIAN_H=1
 # include/compat/err.h
 CFLAGS+=	-DHAVE_ERR_H=1
 # include/compat/netinet/ip.h
 CFLAGS+=	-DHAVE_NETINET_IP_H=1
+# include/compat/poll.h
+CFLAGS+=	-DHAVE_POLL=1
 # include/compat/resolv.h
 CFLAGS+=	-DHAVE_RESOLV_H=1
 # include/compat/readpassphrase.h
@@ -40,7 +42,7 @@ CFLAGS+= \
 # include/compat/string.h
 CFLAGS+= \
 	-DHAVE_EXPLICIT_BZERO=1 \
-	-DHAVE_MEMMEM \
+	-DHAVE_MEMMEM=1 \
 	-DHAVE_STRLCAT=1 \
 	-DHAVE_STRLCPY=1 \
 	-DHAVE_STRNDUP=1 \
@@ -53,23 +55,38 @@ CFLAGS+= \
 	-DHAVE_TIMEGM=1 \
 	-DHAVE_CLOCK_GETTIME=1
 # include/compat/unistd.h
-CFLAGS+=	-DHAVE_PIPE2=1
-# crypto/compat/bsd-asprintf.c
-CFLAGS+=	-DHAVE_ASPRINTF=1
+CFLAGS+= \
+	-DHAVE_UNISTD_H=1 \
+	-DHAVE_PIPE2=1 \
+	-DHAVE_GETOPT=1
+# include/compat/stdio.h crypto/compat/bsd-asprintf.c
+CFLAGS+= \
+	-DHAVE___VA_COPY=1 \
+	-DHAVE_VA_COPY=1 \
+	-DHAVE_ASPRINTF=1
 # crypto/compat/syslog_r.c
 CFLAGS+=	-DHAVE_SYSLOG=1
 # crypto/compat/timegm.c
 CFLAGS+=	-DSIZEOF_TIME_T=8
-# crypto/dso/dso_dlfcn.c
-CFLAGS+=	-DHAVE_DLFCN_H=1
 # apps/nc/compat/sys/socket.h
 CFLAGS+=	-DHAVE_ACCEPT4=1
 
 # Generated in ports build, not referenced / unreachable
-# HAVE_INTTYPES_H HAVE_MEMORY_H HAVE_NETDB_H HAVE_NETINET_IN_H HAVE_POLL
-# HAVE_READPASSPHRASE HAVE_REALLOCARRAY HAVE_SOCKETPAIR HAVE_STDINT_H
-# HAVE_STDLIB_H HAVE_STRING_H HAVE_STRINGS_H HAVE_SYMLINK HAVE_SYS_STAT_H
-# HAVE_SYS_TYPES_H HAVE_SYS_TYPES_H HAVE_UNISTD_H HAVE_VA_COPY
+CFLAGS+= \
+	-DHAVE_DL_ITERATE_PHDR=1 \
+	-DHAVE_INTTYPES_H=1 \
+	-DHAVE_NETDB_H=1 \
+	-DHAVE_NETINET_IN_H=1 \
+	-DHAVE_REALLOCARRAY=1 \
+	-DHAVE_SOCKETPAIR=1 \
+	-DHAVE_STDINT_H=1 \
+	-DHAVE_STDIO_H=1 \
+	-DHAVE_STDLIB_H=1 \
+	-DHAVE_STRING_H=1 \
+	-DHAVE_STRINGS_H=1 \
+	-DHAVE_SYMLINK=1 \
+	-DHAVE_SYS_STAT_H=1 \
+	-DHAVE_SYS_TYPES_H=1 \
 
 LDADD+=	-lthr
 

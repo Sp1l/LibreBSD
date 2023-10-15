@@ -1,6 +1,4 @@
-# $OpenBSD: Makefile,v 1.73 2021/09/14 14:30:57 schwarze Exp $
-# $FreeBSD$
-
+# $OpenBSD: Makefile,v 1.77 2022/07/13 20:52:36 schwarze Exp $
 
 MAN =	BIO_f_ssl.3 \
 	DTLSv1_listen.3 \
@@ -23,6 +21,7 @@ MAN =	BIO_f_ssl.3 \
 	SSL_CTX_sess_set_cache_size.3 \
 	SSL_CTX_sess_set_get_cb.3 \
 	SSL_CTX_sessions.3 \
+	SSL_CTX_set1_groups.3 \
 	SSL_CTX_set_alpn_select_cb.3 \
 	SSL_CTX_set_cert_store.3 \
 	SSL_CTX_set_cert_verify_callback.3 \
@@ -32,6 +31,7 @@ MAN =	BIO_f_ssl.3 \
 	SSL_CTX_set_default_passwd_cb.3 \
 	SSL_CTX_set_generate_session_id.3 \
 	SSL_CTX_set_info_callback.3 \
+	SSL_CTX_set_keylog_callback.3 \
 	SSL_CTX_set_max_cert_list.3 \
 	SSL_CTX_set_min_proto_version.3 \
 	SSL_CTX_set_mode.3 \
@@ -39,6 +39,7 @@ MAN =	BIO_f_ssl.3 \
 	SSL_CTX_set_options.3 \
 	SSL_CTX_set_quiet_shutdown.3 \
 	SSL_CTX_set_read_ahead.3 \
+	SSL_CTX_set_security_level.3 \
 	SSL_CTX_set_session_cache_mode.3 \
 	SSL_CTX_set_session_id_context.3 \
 	SSL_CTX_set_ssl_version.3 \
@@ -50,7 +51,6 @@ MAN =	BIO_f_ssl.3 \
 	SSL_CTX_set_tmp_dh_callback.3 \
 	SSL_CTX_set_tmp_rsa_callback.3 \
 	SSL_CTX_set_verify.3 \
-	SSL_CTX_set1_groups.3 \
 	SSL_CTX_use_certificate.3 \
 	SSL_SESSION_free.3 \
 	SSL_SESSION_get_compress_id.3 \
@@ -102,6 +102,7 @@ MAN =	BIO_f_ssl.3 \
 	SSL_num_renegotiations.3 \
 	SSL_pending.3 \
 	SSL_read.3 \
+	SSL_read_early_data.3 \
 	SSL_renegotiate.3 \
 	SSL_rstate_string.3 \
 	SSL_session_reused.3 \
@@ -124,6 +125,7 @@ MAN =	BIO_f_ssl.3 \
 	d2i_SSL_SESSION.3 \
 	ssl.3
 
+
 MLINKS+= \
 	BIO_f_ssl.3 BIO_do_handshake.3 \
 	BIO_f_ssl.3 BIO_get_num_renegotiates.3 \
@@ -140,6 +142,9 @@ MLINKS+= \
 	PEM_read_SSL_SESSION.3 PEM_read_bio_SSL_SESSION.3 \
 	PEM_read_SSL_SESSION.3 PEM_write_SSL_SESSION.3 \
 	PEM_read_SSL_SESSION.3 PEM_write_bio_SSL_SESSION.3 \
+	SSL_alert_type_string.3 SSL_alert_desc_string.3 \
+	SSL_alert_type_string.3 SSL_alert_desc_string_long.3 \
+	SSL_alert_type_string.3 SSL_alert_type_string_long.3 \
 	SSL_CIPHER_get_name.3 SSL_CIPHER_description.3 \
 	SSL_CIPHER_get_name.3 SSL_CIPHER_find.3 \
 	SSL_CIPHER_get_name.3 SSL_CIPHER_get_auth_nid.3 \
@@ -270,9 +275,6 @@ MLINKS+= \
 	SSL_CTX_set_msg_callback.3 SSL_CTX_set_msg_callback_arg.3 \
 	SSL_CTX_set_msg_callback.3 SSL_set_msg_callback.3 \
 	SSL_CTX_set_msg_callback.3 SSL_set_msg_callback_arg.3 \
-	SSL_CTX_set_num_tickets.3 SSL_CTX_get_num_tickets.3 \
-	SSL_CTX_set_num_tickets.3 SSL_get_num_tickets.3 \
-	SSL_CTX_set_num_tickets.3 SSL_set_num_tickets.3 \
 	SSL_CTX_set_options.3 SSL_CTX_clear_options.3 \
 	SSL_CTX_set_options.3 SSL_CTX_get_options.3 \
 	SSL_CTX_set_options.3 SSL_clear_options.3 \
@@ -357,9 +359,6 @@ MLINKS+= \
 	SSL_SESSION_has_ticket.3 SSL_SESSION_get_ticket_lifetime_hint.3 \
 	SSL_SESSION_print.3 SSL_SESSION_print_fp.3 \
 	SSL_SESSION_set1_id_context.3 SSL_SESSION_get0_id_context.3 \
-	SSL_alert_type_string.3 SSL_alert_desc_string.3 \
-	SSL_alert_type_string.3 SSL_alert_desc_string_long.3 \
-	SSL_alert_type_string.3 SSL_alert_type_string_long.3 \
 	SSL_get_certificate.3 SSL_get_privatekey.3 \
 	SSL_get_ciphers.3 SSL_CTX_get_ciphers.3 \
 	SSL_get_ciphers.3 SSL_get1_supported_ciphers.3 \

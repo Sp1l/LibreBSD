@@ -59,7 +59,9 @@
 
 /* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
    don't. */
+#ifndef WITH_LIBRESSL
 #define HAVE_DECL_NID_ED448 1
+#endif
 
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
@@ -437,11 +439,13 @@
 #define USE_ED25519 1
 
 /* Define this to enable ED448 support. */
+#ifndef WITH_LIBRESSL
 #define USE_ED448 1
+#endif
 
 /* Define this to enable GOST support. */
 /* #undef USE_GOST */
-#ifdef WITH_LIBRESSL
+#ifndef WITH_LIBRESSL
 #define USE_GOST 1
 #endif
 

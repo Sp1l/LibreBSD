@@ -120,7 +120,7 @@ hx509_context_init(hx509_context *context)
     _hx509_ks_dir_register(*context);
     _hx509_ks_keychain_register(*context);
 
-    ENGINE_add_conf_module();
+    OPENSSL_load_builtin_modules();
     OpenSSL_add_all_algorithms();
 
     (*context)->ocsp_time_diff = HX509_DEFAULT_OCSP_TIME_DIFF;

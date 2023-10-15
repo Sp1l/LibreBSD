@@ -1,6 +1,7 @@
 #ifndef __crypto_headers_h__
 #define __crypto_headers_h__
 
+#include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/des.h>
 #include <openssl/rc4.h>

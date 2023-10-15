@@ -1383,7 +1383,7 @@ int
 info(void *opt, int argc, char **argv)
 {
 
-    ENGINE_add_conf_module();
+    OPENSSL_load_builtin_modules();
 
     {
 	const RSA_METHOD *m = RSA_get_default_method();

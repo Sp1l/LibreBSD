@@ -11,3 +11,7 @@ SRCS+=	 ssh_namespace.h
 # Built-in security key support
 CFLAGS+= -include sk_config.h
 .endif
+
+.if ${MK_LIBRESSL} != "no"
+CFLAGS+= -DWITH_LIBRESSL=YES
+.endif

@@ -23,7 +23,7 @@ CLOUDWARE_TYPES?= BASIC-CI \
 		OCI \
 		VAGRANT
 AZURE_FORMAT=	vhdf
-AZURE_FSLIST=	ufs
+AZURE_FSLIST=	ufs zfs
 AZURE_DESC=	Microsoft Azure platform image
 BASIC-CI_FORMAT=	raw
 BASIC-CI_FSLIST=	ufs
@@ -34,7 +34,7 @@ EC2_FLAVOURS=	BASE CLOUD-INIT
 EC2-BASE_DESC=	Amazon EC2 image
 EC2-CLOUD-INIT_DESC=	Amazon EC2 Cloud-Init image
 GCE_FORMAT=	raw
-GCE_FSLIST=	ufs
+GCE_FSLIST=	ufs zfs
 GCE_DESC=	Google Compute Engine image
 OCI_FORMAT=	qcow2
 OCI_FSLIST=	ufs

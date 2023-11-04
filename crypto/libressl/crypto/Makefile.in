@@ -148,9 +148,8 @@ host_triplet = @host@
 @HOST_ASM_ELF_X86_64_TRUE@	-DSHA256_ASM -DSHA512_ASM \
 @HOST_ASM_ELF_X86_64_TRUE@	-DWHIRLPOOL_ASM -DOPENSSL_CPUID_OBJ
 @HOST_ASM_ELF_X86_64_TRUE@am__append_43 = $(ASM_X86_64_ELF)
-@HOST_ASM_MACOSX_X86_64_TRUE@am__append_44 = -Dendbr64= -DAES_ASM \
-@HOST_ASM_MACOSX_X86_64_TRUE@	-DBSAES_ASM -DVPAES_ASM \
-@HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_IA32_SSE2 \
+@HOST_ASM_MACOSX_X86_64_TRUE@am__append_44 = -DAES_ASM -DBSAES_ASM \
+@HOST_ASM_MACOSX_X86_64_TRUE@	-DVPAES_ASM -DOPENSSL_IA32_SSE2 \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DOPENSSL_BN_ASM_MONT5 -DMD5_ASM \
 @HOST_ASM_MACOSX_X86_64_TRUE@	-DGHASH_ASM -DRSA_ASM -DSHA1_ASM \
@@ -1776,9 +1775,9 @@ noinst_LTLIBRARIES = libcompat.la $(am__append_1) $(am__append_5)
 
 # needed for a CMake target
 EXTRA_DIST = VERSION CMakeLists.txt crypto.sym empty.c \
-	compat/strcasecmp.c $(ASM_ARM_ELF) $(ASM_MIPS_ELF) \
-	$(ASM_MIPS64_ELF) $(ASM_X86_64_ELF) $(ASM_X86_64_MACOSX) \
-	$(ASM_X86_64_MASM) $(ASM_X86_64_MINGW64)
+	compat/strcasecmp.c compat/getopt_long.c $(ASM_ARM_ELF) \
+	$(ASM_MIPS_ELF) $(ASM_MIPS64_ELF) $(ASM_X86_64_ELF) \
+	$(ASM_X86_64_MACOSX) $(ASM_X86_64_MASM) $(ASM_X86_64_MINGW64)
 BUILT_SOURCES = crypto_portable.sym
 CLEANFILES = crypto_portable.sym libcrypto_la_objects.mk
 libcrypto_la_LDFLAGS = -version-info @LIBCRYPTO_VERSION@ -no-undefined -export-symbols crypto_portable.sym

@@ -13,7 +13,6 @@ md5_block_asm_data_order:
 	movq	%rdx,%rsi
 	movq	%r8,%rdx
 
-	endbr64
 	pushq	%rbp
 	pushq	%rbx
 	pushq	%r12

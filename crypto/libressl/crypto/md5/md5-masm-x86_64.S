@@ -82,7 +82,6 @@ $L$SEH_begin_md5_block_asm_data_order::
 	mov	rdx,r8
 
 
-	endbr64
 	push	rbp
 	push	rbx
 	push	r12

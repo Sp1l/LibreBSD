@@ -2,7 +2,6 @@
 
 
 .section	.ctors
-	endbr64
 	.p2align	3
 	.quad	OPENSSL_cpuid_setup
 
@@ -15,7 +14,6 @@
 .def	OPENSSL_ia32_cpuid;	.scl 2;	.type 32;	.endef
 .p2align	4
 OPENSSL_ia32_cpuid:
-	endbr64
 	movq	%rbx,%r8
 
 	xorl	%eax,%eax

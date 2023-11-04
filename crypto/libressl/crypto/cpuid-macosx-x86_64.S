@@ -2,7 +2,6 @@
 
 .private_extern	_OPENSSL_cpuid_setup
 .mod_init_func
-	endbr64
 	.p2align	3
 	.quad	_OPENSSL_cpuid_setup
 
@@ -15,7 +14,6 @@
 
 .p2align	4
 _OPENSSL_ia32_cpuid:
-	endbr64
 	movq	%rbx,%r8
 
 	xorl	%eax,%eax

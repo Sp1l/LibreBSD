@@ -70,7 +70,6 @@ OPTION	DOTNAME
 EXTERN	OPENSSL_cpuid_setup:NEAR
 
 .CRT$XCU	SEGMENT READONLY ALIGN(8)
-	endbr64
 		DQ	OPENSSL_cpuid_setup
 
 EXTERN	OPENSSL_ia32cap_P:NEAR
@@ -83,7 +82,6 @@ PUBLIC	OPENSSL_ia32_cpuid
 
 ALIGN	16
 OPENSSL_ia32_cpuid	PROC PUBLIC
-	endbr64
 	mov	r8,rbx
 
 	xor	eax,eax

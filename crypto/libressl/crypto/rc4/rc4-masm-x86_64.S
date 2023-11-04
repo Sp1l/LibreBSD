@@ -84,8 +84,6 @@ $L$SEH_begin_RC4::
 	mov	rdx,r8
 	mov	rcx,r9
 
-
-	endbr64
 	or	rsi,rsi
 	jne	$L$entry
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
@@ -617,7 +615,6 @@ $L$SEH_begin_RC4_set_key::
 	mov	rdx,r8
 
 
-	endbr64
 	lea	rdi,QWORD PTR[8+rdi]
 	lea	rdx,QWORD PTR[rsi*1+rdx]
 	neg	rsi

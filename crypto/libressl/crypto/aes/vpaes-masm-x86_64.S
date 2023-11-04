@@ -87,7 +87,6 @@ OPTION	DOTNAME
 
 ALIGN	16
 _vpaes_encrypt_core	PROC PRIVATE
-	endbr64
 	mov	r9,rdx
 	mov	r11,16
 	mov	eax,DWORD PTR[240+rdx]
@@ -178,7 +177,6 @@ _vpaes_encrypt_core	ENDP
 
 ALIGN	16
 _vpaes_decrypt_core	PROC PRIVATE
-	endbr64
 	mov	r9,rdx
 	mov	eax,DWORD PTR[240+rdx]
 	movdqa	xmm1,xmm9
@@ -286,7 +284,6 @@ _vpaes_decrypt_core	ENDP
 
 ALIGN	16
 _vpaes_schedule_core	PROC PRIVATE
-	endbr64
 
 
 
@@ -472,7 +469,6 @@ _vpaes_schedule_core	ENDP
 
 ALIGN	16
 _vpaes_schedule_192_smear	PROC PRIVATE
-	endbr64
 	pshufd	xmm0,xmm6,080h
 	pxor	xmm6,xmm0
 	pshufd	xmm0,xmm7,0FEh
@@ -504,7 +500,6 @@ _vpaes_schedule_192_smear	ENDP
 
 ALIGN	16
 _vpaes_schedule_round	PROC PRIVATE
-	endbr64
 
 	pxor	xmm1,xmm1
 DB	102,65,15,58,15,200,15
@@ -572,7 +567,6 @@ _vpaes_schedule_round	ENDP
 
 ALIGN	16
 _vpaes_schedule_transform	PROC PRIVATE
-	endbr64
 	movdqa	xmm1,xmm9
 	pandn	xmm1,xmm0
 	psrld	xmm1,4
@@ -611,7 +605,6 @@ _vpaes_schedule_transform	ENDP
 
 ALIGN	16
 _vpaes_schedule_mangle	PROC PRIVATE
-	endbr64
 	movdqa	xmm4,xmm0
 	movdqa	xmm5,XMMWORD PTR[$L$k_mc_forward]
 	test	rcx,rcx
@@ -694,7 +687,6 @@ $L$SEH_begin_vpaes_set_encrypt_key::
 	mov	rdx,r8
 
 
-	endbr64
 	lea	rsp,QWORD PTR[((-184))+rsp]
 	movaps	XMMWORD PTR[16+rsp],xmm6
 	movaps	XMMWORD PTR[32+rsp],xmm7
@@ -747,7 +739,6 @@ $L$SEH_begin_vpaes_set_decrypt_key::
 	mov	rdx,r8
 
 
-	endbr64
 	lea	rsp,QWORD PTR[((-184))+rsp]
 	movaps	XMMWORD PTR[16+rsp],xmm6
 	movaps	XMMWORD PTR[32+rsp],xmm7
@@ -805,7 +796,6 @@ $L$SEH_begin_vpaes_encrypt::
 	mov	rdx,r8
 
 
-	endbr64
 	lea	rsp,QWORD PTR[((-184))+rsp]
 	movaps	XMMWORD PTR[16+rsp],xmm6
 	movaps	XMMWORD PTR[32+rsp],xmm7
@@ -853,7 +843,6 @@ $L$SEH_begin_vpaes_decrypt::
 	mov	rdx,r8
 
 
-	endbr64
 	lea	rsp,QWORD PTR[((-184))+rsp]
 	movaps	XMMWORD PTR[16+rsp],xmm6
 	movaps	XMMWORD PTR[32+rsp],xmm7
@@ -903,7 +892,6 @@ $L$SEH_begin_vpaes_cbc_encrypt::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-	endbr64
 	xchg	rdx,rcx
 	sub	rcx,16
 	jc	$L$cbc_abort
@@ -976,7 +964,6 @@ vpaes_cbc_encrypt	ENDP
 
 ALIGN	16
 _vpaes_preheat	PROC PRIVATE
-	endbr64
 	lea	r10,QWORD PTR[$L$k_s0F]
 	movdqa	xmm10,XMMWORD PTR[((-32))+r10]
 	movdqa	xmm11,XMMWORD PTR[((-16))+r10]
@@ -992,8 +979,6 @@ _vpaes_preheat	ENDP
 
 
 
-.text$	ENDS
-.rdata	SEGMENT READONLY ALIGN(8)
 
 ALIGN	64
 _vpaes_consts::
@@ -1090,15 +1075,17 @@ $L$k_dsbe::
 $L$k_dsbo::
 	DQ	01387EA537EF94000h,0C7AA6DB9D4943E2Dh
 	DQ	012D7560F93441D00h,0CA4B8159D8C58E9Ch
+DB	86,101,99,116,111,114,32,80,101,114,109,117,116,97,116,105
+DB	111,110,32,65,69,83,32,102,111,114,32,120,56,54,95,54
+DB	52,47,83,83,83,69,51,44,32,77,105,107,101,32,72,97
+DB	109,98,117,114,103,32,40,83,116,97,110,102,111,114,100,32
+DB	85,110,105,118,101,114,115,105,116,121,41,0
 ALIGN	64
 
-.rdata	ENDS
-.text$	SEGMENT ALIGN(64) 'CODE'
 EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 se_handler	PROC PRIVATE
-	endbr64
 	push	rsi
 	push	rdi
 	push	rbx

@@ -111,7 +111,6 @@ if(HOST_ASM_MACOSX_X86_64)
 		bn/arch/amd64/word_clz.S
 		bn/arch/amd64/bn_arch.c
 	)
-	add_definitions(-Dendbr64=)
 	add_definitions(-DAES_ASM)
 	add_definitions(-DBSAES_ASM)
 	add_definitions(-DVPAES_ASM)
@@ -153,6 +152,7 @@ if(HOST_ASM_MASM_X86_64)
 		whrlpool/wp-masm-x86_64.S
 		cpuid-masm-x86_64.S
 	)
+	add_definitions(-Dendbr64=)
 	add_definitions(-DAES_ASM)
 	add_definitions(-DBSAES_ASM)
 	add_definitions(-DVPAES_ASM)
@@ -193,6 +193,7 @@ if(HOST_ASM_MINGW64_X86_64)
 		whrlpool/wp-mingw64-x86_64.S
 		cpuid-mingw64-x86_64.S
 	)
+	add_definitions(-Dendbr64=)
 	add_definitions(-DAES_ASM)
 	add_definitions(-DBSAES_ASM)
 	add_definitions(-DVPAES_ASM)
@@ -778,6 +779,8 @@ endif()
 if(NOT HAVE_GETOPT)
 	set(CRYPTO_SRC ${CRYPTO_SRC} compat/getopt_long.c)
 	set(EXTRA_EXPORT ${EXTRA_EXPORT} getopt)
+	set(EXTRA_EXPORT ${EXTRA_EXPORT} optarg)
+	set(EXTRA_EXPORT ${EXTRA_EXPORT} optind)
 endif()
 
 if(NOT HAVE_GETPAGESIZE)

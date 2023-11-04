@@ -6,9 +6,7 @@
 .globl	_RC4
 
 .p2align	4
-_RC4:
-	endbr64
-	orq	%rsi,%rsi
+_RC4:	orq	%rsi,%rsi
 	jne	L$entry
 	retq
 L$entry:
@@ -525,7 +523,6 @@ L$epilogue:
 
 .p2align	4
 _RC4_set_key:
-	endbr64
 	leaq	8(%rdi),%rdi
 	leaq	(%rdx,%rsi,1),%rdx
 	negq	%rsi

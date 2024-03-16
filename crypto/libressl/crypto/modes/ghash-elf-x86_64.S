@@ -1,3 +1,9 @@
+#if defined(__CET__)
+#include <cet.h>
+#else
+#define _CET_ENDBR
+#endif
+
 #include "x86_arch.h"
 .text	
 
@@ -5,6 +11,7 @@
 .type	gcm_gmult_4bit,@function
 .align	16
 gcm_gmult_4bit:
+_CET_ENDBR
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -93,6 +100,7 @@ gcm_gmult_4bit:
 .type	gcm_ghash_4bit,@function
 .align	16
 gcm_ghash_4bit:
+_CET_ENDBR
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -659,7 +667,7 @@ gcm_ghash_4bit:
 .type	gcm_init_clmul,@function
 .align	16
 gcm_init_clmul:
-	endbr64
+_CET_ENDBR
 	movdqu	(%rsi),%xmm2
 	pshufd	$78,%xmm2,%xmm2
 
@@ -725,7 +733,7 @@ gcm_init_clmul:
 .type	gcm_gmult_clmul,@function
 .align	16
 gcm_gmult_clmul:
-	endbr64
+_CET_ENDBR
 	movdqu	(%rdi),%xmm0
 	movdqa	.Lbswap_mask(%rip),%xmm5
 	movdqu	(%rsi),%xmm2
@@ -776,7 +784,7 @@ gcm_gmult_clmul:
 .type	gcm_ghash_clmul,@function
 .align	16
 gcm_ghash_clmul:
-	endbr64
+_CET_ENDBR
 	movdqa	.Lbswap_mask(%rip),%xmm5
 
 	movdqu	(%rdi),%xmm0

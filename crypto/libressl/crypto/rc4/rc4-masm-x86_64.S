@@ -1,26 +1,46 @@
 ; 1 "crypto/rc4/rc4-masm-x86_64.S.tmp"
 ; 1 "<built-in>" 1
 ; 1 "<built-in>" 3
-; 343 "<built-in>" 3
+; 371 "<built-in>" 3
 ; 1 "<command line>" 1
 ; 1 "<built-in>" 2
 ; 1 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
+; 1 "./include/compat/cet.h" 1
+
+
+
+   
+
+
+
+
+
+; 18 "./include/compat/cet.h"
+
+
+; 4 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
+
+
+
+
+
 ; 1 "./crypto/x86_arch.h" 1
 
 
 ; 16 "./crypto/x86_arch.h"
+   
 
 
 
 
 
-
-
+   
 
 
 ; 40 "./crypto/x86_arch.h"
+   
 
 
 
@@ -65,8 +85,7 @@ OPTION	DOTNAME
 
 
 
-
-; 3 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
+; 9 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
 .text$	SEGMENT ALIGN(64) 'CODE'
 EXTERN	OPENSSL_ia32cap_P:NEAR
 
@@ -84,6 +103,8 @@ $L$SEH_begin_RC4::
 	mov	rdx,r8
 	mov	rcx,r9
 
+
+_CET_ENDBR
 	or	rsi,rsi
 	jne	$L$entry
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
@@ -615,6 +636,7 @@ $L$SEH_begin_RC4_set_key::
 	mov	rdx,r8
 
 
+_CET_ENDBR
 	lea	rdi,QWORD PTR[8+rdi]
 	lea	rdx,QWORD PTR[rsi*1+rdx]
 	neg	rsi

@@ -1,26 +1,46 @@
 ; 1 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp"
 ; 1 "<built-in>" 1
 ; 1 "<built-in>" 3
-; 343 "<built-in>" 3
+; 371 "<built-in>" 3
 ; 1 "<command line>" 1
 ; 1 "<built-in>" 2
 ; 1 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
+; 1 "./include/compat/cet.h" 1
+
+
+
+   
+
+
+
+
+
+; 18 "./include/compat/cet.h"
+
+
+; 4 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
+
+
+
+
+
 ; 1 "./crypto/x86_arch.h" 1
 
 
 ; 16 "./crypto/x86_arch.h"
+   
 
 
 
 
 
-
-
+   
 
 
 ; 40 "./crypto/x86_arch.h"
+   
 
 
 
@@ -65,8 +85,7 @@ OPTION	DOTNAME
 
 
 
-
-; 3 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
+; 9 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
 .text$	SEGMENT ALIGN(64) 'CODE'
 ALIGN	16
 
@@ -85,6 +104,7 @@ $L$SEH_begin_rc4_md5_enc::
 	mov	r9,QWORD PTR[48+rsp]
 
 
+_CET_ENDBR
 	cmp	r9,0
 	je	$L$abort
 	push	rbx

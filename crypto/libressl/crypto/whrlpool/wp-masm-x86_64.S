@@ -1,26 +1,46 @@
 ; 1 "crypto/whrlpool/wp-masm-x86_64.S.tmp"
 ; 1 "<built-in>" 1
 ; 1 "<built-in>" 3
-; 343 "<built-in>" 3
+; 371 "<built-in>" 3
 ; 1 "<command line>" 1
 ; 1 "<built-in>" 2
 ; 1 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
+; 1 "./include/compat/cet.h" 1
+
+
+
+   
+
+
+
+
+
+; 18 "./include/compat/cet.h"
+
+
+; 4 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
+
+
+
+
+
 ; 1 "./crypto/x86_arch.h" 1
 
 
 ; 16 "./crypto/x86_arch.h"
+   
 
 
 
 
 
-
-
+   
 
 
 ; 40 "./crypto/x86_arch.h"
+   
 
 
 
@@ -65,8 +85,7 @@ OPTION	DOTNAME
 
 
 
-
-; 3 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
+; 9 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
 .text$	SEGMENT ALIGN(64) 'CODE'
 
 PUBLIC	whirlpool_block
@@ -82,6 +101,7 @@ $L$SEH_begin_whirlpool_block::
 	mov	rdx,r8
 
 
+_CET_ENDBR
 	push	rbx
 	push	rbp
 	push	r12
@@ -668,6 +688,8 @@ $L$epilogue::
 $L$SEH_end_whirlpool_block::
 whirlpool_block	ENDP
 
+.text$	ENDS
+.rdata	SEGMENT READONLY ALIGN(64)
 ALIGN	64
 
 $L$table::
@@ -938,6 +960,6 @@ DB	228,39,65,139,167,125,149,216
 DB	251,238,124,102,221,23,71,158
 DB	202,45,191,7,173,90,131,51
 
-.text$	ENDS
+.rdata	ENDS
 END
 

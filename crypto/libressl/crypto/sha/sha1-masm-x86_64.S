@@ -1,26 +1,46 @@
 ; 1 "crypto/sha/sha1-masm-x86_64.S.tmp"
 ; 1 "<built-in>" 1
 ; 1 "<built-in>" 3
-; 343 "<built-in>" 3
+; 371 "<built-in>" 3
 ; 1 "<command line>" 1
 ; 1 "<built-in>" 2
 ; 1 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
+; 1 "./include/compat/cet.h" 1
+
+
+
+   
+
+
+
+
+
+; 18 "./include/compat/cet.h"
+
+
+; 4 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
+
+
+
+
+
 ; 1 "./crypto/x86_arch.h" 1
 
 
 ; 16 "./crypto/x86_arch.h"
+   
 
 
 
 
 
-
-
+   
 
 
 ; 40 "./crypto/x86_arch.h"
+   
 
 
 
@@ -65,8 +85,7 @@ OPTION	DOTNAME
 
 
 
-
-; 3 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
+; 9 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
 .text$	SEGMENT ALIGN(64) 'CODE'
 EXTERN	OPENSSL_ia32cap_P:NEAR
 
@@ -84,6 +103,7 @@ $L$SEH_begin_sha1_block_data_order::
 	mov	rdx,r8
 
 
+_CET_ENDBR
 	mov	r9d,DWORD PTR[((OPENSSL_ia32cap_P+0))]
 	mov	r8d,DWORD PTR[((OPENSSL_ia32cap_P+4))]
 	test	r8d,(1 SHL 9)
@@ -1383,6 +1403,7 @@ $L$SEH_begin_sha1_block_data_order_ssse3::
 
 
 _ssse3_shortcut::
+_CET_ENDBR
 	push	rbx
 	push	rbp
 	push	r12
@@ -2580,6 +2601,8 @@ $L$epilogue_ssse3::
 	DB	0F3h,0C3h		;repret
 $L$SEH_end_sha1_block_data_order_ssse3::
 sha1_block_data_order_ssse3	ENDP
+.text$	ENDS
+.rdata	SEGMENT READONLY ALIGN(64)
 ALIGN	64
 K_XX_XX::
 	DD	05a827999h,05a827999h,05a827999h,05a827999h	
@@ -2587,16 +2610,14 @@ K_XX_XX::
 	DD	08f1bbcdch,08f1bbcdch,08f1bbcdch,08f1bbcdch	
 	DD	0ca62c1d6h,0ca62c1d6h,0ca62c1d6h,0ca62c1d6h	
 	DD	000010203h,004050607h,008090a0bh,00c0d0e0fh	
-DB	83,72,65,49,32,98,108,111,99,107,32,116,114,97,110,115
-DB	102,111,114,109,32,102,111,114,32,120,56,54,95,54,52,44
-DB	32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60
-DB	97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114
-DB	103,62,0
+.rdata	ENDS
+.text$	SEGMENT ALIGN(64) 'CODE'
 ALIGN	64
 EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 se_handler	PROC PRIVATE
+_CET_ENDBR
 	push	rsi
 	push	rdi
 	push	rbx

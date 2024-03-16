@@ -109,7 +109,6 @@ extern "C" {
 #endif
 #endif
 #undef X509_NAME
-#undef X509_CERT_PAIR
 #undef X509_EXTENSIONS
 #endif
 

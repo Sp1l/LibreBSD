@@ -26,11 +26,7 @@ if(WIN32)
 	set(LIBTLS_EXTRA_EXPORT ${LIBTLS_EXTRA_EXPORT} ftruncate)
 endif()
 
-if(NOT "${OPENSSLDIR}" STREQUAL "")
-	add_definitions(-DTLS_DEFAULT_CA_FILE=\"${OPENSSLDIR}/cert.pem\")
-else()
-	add_definitions(-DTLS_DEFAULT_CA_FILE=\"${CMAKE_INSTALL_PREFIX}/etc/ssl/cert.pem\")
-endif()
+add_definitions(-DTLS_DEFAULT_CA_FILE=\"${OPENSSLDIR}/cert.pem\")
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tls.sym DESTINATION
 	${CMAKE_CURRENT_BINARY_DIR})
@@ -50,11 +46,10 @@ target_include_directories(tls_obj
 		../include
 		${CMAKE_BINARY_DIR}/include)
 
-add_library(tls $<TARGET_OBJECTS:tls_obj> $<TARGET_OBJECTS:ssl_obj>
-	$<TARGET_OBJECTS:crypto_obj> empty.c)
+add_library(tls $<TARGET_OBJECTS:tls_obj> empty.c)
 
 export_symbol(tls ${CMAKE_CURRENT_BINARY_DIR}/tls.sym)
-target_link_libraries(tls ${PLATFORM_LIBS})
+target_link_libraries(tls ${OPENSSL_LIBS})
 if (WIN32)
 	set(TLS_POSTFIX -${TLS_MAJOR_VERSION} PARENT_SCOPE)
 endif()
@@ -101,8 +96,7 @@ endif(ENABLE_LIBRESSL_INSTALL)
 
 # build static library for regression test
 if(BUILD_SHARED_LIBS)
-	add_library(tls-static STATIC $<TARGET_OBJECTS:tls_obj>
-		$<TARGET_OBJECTS:ssl_obj> $<TARGET_OBJECTS:crypto_obj>)
-	target_link_libraries(tls-static ${PLATFORM_LIBS})
+	add_library(tls-static STATIC $<TARGET_OBJECTS:tls_obj>)
+	target_link_libraries(tls-static ${OPENSSL_TEST_LIBS})
 endif()
 

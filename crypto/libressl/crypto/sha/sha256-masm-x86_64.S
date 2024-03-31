@@ -7,20 +7,7 @@
 ; 1 "crypto/sha/sha256-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/sha/sha256-masm-x86_64.S.tmp" 2
 
 
 
@@ -102,7 +89,7 @@ $L$SEH_begin_sha256_block_data_order::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12

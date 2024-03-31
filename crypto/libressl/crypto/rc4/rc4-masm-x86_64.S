@@ -7,20 +7,7 @@
 ; 1 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/rc4/rc4-masm-x86_64.S.tmp" 2
 
 
 
@@ -104,7 +91,7 @@ $L$SEH_begin_RC4::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	or	rsi,rsi
 	jne	$L$entry
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
@@ -636,7 +623,7 @@ $L$SEH_begin_RC4_set_key::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	lea	rdi,QWORD PTR[8+rdi]
 	lea	rdx,QWORD PTR[rsi*1+rdx]
 	neg	rsi

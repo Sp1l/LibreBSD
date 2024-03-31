@@ -7,20 +7,7 @@
 ; 1 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/whrlpool/wp-masm-x86_64.S.tmp" 2
 
 
 
@@ -101,7 +88,7 @@ $L$SEH_begin_whirlpool_block::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12

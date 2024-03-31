@@ -7,20 +7,7 @@
 ; 1 "crypto/aes/aesni-sha1-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/aes/aesni-sha1-masm-x86_64.S.tmp" 2
 
 
 
@@ -94,7 +81,7 @@ PUBLIC	aesni_cbc_sha1_enc
 
 ALIGN	16
 aesni_cbc_sha1_enc	PROC PUBLIC
-_CET_ENDBR
+
 
 	mov	r10d,DWORD PTR[((OPENSSL_ia32cap_P+0))]
 	mov	r11d,DWORD PTR[((OPENSSL_ia32cap_P+4))]
@@ -116,7 +103,7 @@ $L$SEH_begin_aesni_cbc_sha1_enc_ssse3::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	mov	r10,QWORD PTR[56+rsp]
 
 
@@ -1527,7 +1514,7 @@ EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 ssse3_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx

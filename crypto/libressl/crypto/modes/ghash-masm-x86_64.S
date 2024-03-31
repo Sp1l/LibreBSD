@@ -7,20 +7,7 @@
 ; 1 "crypto/modes/ghash-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/modes/ghash-masm-x86_64.S.tmp" 2
 
 
 
@@ -100,7 +87,7 @@ $L$SEH_begin_gcm_gmult_4bit::
 	mov	rsi,rdx
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -202,7 +189,7 @@ $L$SEH_begin_gcm_ghash_4bit::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -772,7 +759,7 @@ PUBLIC	gcm_init_clmul
 
 ALIGN	16
 gcm_init_clmul	PROC PUBLIC
-_CET_ENDBR
+
 	movdqu	xmm2,XMMWORD PTR[rdx]
 	pshufd	xmm2,xmm2,78
 
@@ -838,7 +825,7 @@ PUBLIC	gcm_gmult_clmul
 
 ALIGN	16
 gcm_gmult_clmul	PROC PUBLIC
-_CET_ENDBR
+
 	movdqu	xmm0,XMMWORD PTR[rcx]
 	movdqa	xmm5,XMMWORD PTR[$L$bswap_mask]
 	movdqu	xmm2,XMMWORD PTR[rdx]
@@ -889,7 +876,7 @@ PUBLIC	gcm_ghash_clmul
 
 ALIGN	16
 gcm_ghash_clmul	PROC PUBLIC
-_CET_ENDBR
+
 $L$SEH_begin_gcm_ghash_clmul::
 
 DB	048h,083h,0ech,058h		
@@ -1161,7 +1148,7 @@ EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 se_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx

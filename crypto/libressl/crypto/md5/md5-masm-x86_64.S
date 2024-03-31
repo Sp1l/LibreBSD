@@ -7,20 +7,7 @@
 ; 1 "crypto/md5/md5-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/md5/md5-masm-x86_64.S.tmp" 2
 
 
 
@@ -101,7 +88,7 @@ $L$SEH_begin_md5_block_asm_data_order::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbp
 	push	rbx
 	push	r12

@@ -7,20 +7,7 @@
 ; 1 "crypto/camellia/cmll-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/camellia/cmll-masm-x86_64.S.tmp" 2
 
 
 
@@ -93,7 +80,7 @@ PUBLIC	Camellia_EncryptBlock
 
 ALIGN	16
 Camellia_EncryptBlock	PROC PUBLIC
-_CET_ENDBR
+
 	mov	eax,128
 	sub	eax,edi
 	mov	edi,3
@@ -116,7 +103,7 @@ $L$SEH_begin_Camellia_EncryptBlock_Rounds::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r13
@@ -168,7 +155,7 @@ Camellia_EncryptBlock_Rounds	ENDP
 
 ALIGN	16
 _x86_64_Camellia_encrypt	PROC PRIVATE
-_CET_ENDBR
+
 	xor	r9d,DWORD PTR[r14]
 	xor	r8d,DWORD PTR[4+r14]
 	xor	r11d,DWORD PTR[8+r14]
@@ -378,7 +365,7 @@ PUBLIC	Camellia_DecryptBlock
 
 ALIGN	16
 Camellia_DecryptBlock	PROC PUBLIC
-_CET_ENDBR
+
 	mov	eax,128
 	sub	eax,edi
 	mov	edi,3
@@ -401,7 +388,7 @@ $L$SEH_begin_Camellia_DecryptBlock_Rounds::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r13
@@ -453,7 +440,7 @@ Camellia_DecryptBlock_Rounds	ENDP
 
 ALIGN	16
 _x86_64_Camellia_decrypt	PROC PRIVATE
-_CET_ENDBR
+
 	xor	r9d,DWORD PTR[r14]
 	xor	r8d,DWORD PTR[4+r14]
 	xor	r11d,DWORD PTR[8+r14]
@@ -671,7 +658,7 @@ $L$SEH_begin_Camellia_Ekeygen::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r13
@@ -1754,7 +1741,7 @@ $L$SEH_begin_Camellia_cbc_encrypt::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	cmp	rdx,0
 	je	$L$cbc_abort
 	push	rbx

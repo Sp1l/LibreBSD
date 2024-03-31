@@ -7,20 +7,7 @@
 ; 1 "crypto/bn/mont-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/bn/mont-masm-x86_64.S.tmp" 2
 
 
 
@@ -104,7 +91,7 @@ $L$SEH_begin_bn_mul_mont::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	test	r9d,3
 	jnz	$L$mul_enter
 	cmp	r9d,8
@@ -327,7 +314,7 @@ $L$SEH_begin_bn_mul4x_mont::
 
 
 $L$mul4x_enter::
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -741,7 +728,7 @@ $L$SEH_begin_bn_sqr4x_mont::
 
 
 $L$sqr4x_enter::
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12

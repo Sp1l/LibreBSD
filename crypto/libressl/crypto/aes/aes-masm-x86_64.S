@@ -7,20 +7,7 @@
 ; 1 "crypto/aes/aes-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/aes/aes-masm-x86_64.S.tmp" 2
 
 
 
@@ -91,7 +78,7 @@ OPTION	DOTNAME
 
 ALIGN	16
 _x86_64_AES_encrypt	PROC PRIVATE
-_CET_ENDBR
+
 	xor	eax,DWORD PTR[r15]
 	xor	ebx,DWORD PTR[4+r15]
 	xor	ecx,DWORD PTR[8+r15]
@@ -245,7 +232,7 @@ _x86_64_AES_encrypt	ENDP
 
 ALIGN	16
 _x86_64_AES_encrypt_compact	PROC PRIVATE
-_CET_ENDBR
+
 	lea	r8,QWORD PTR[128+r14]
 	mov	edi,DWORD PTR[((0-128))+r8]
 	mov	ebp,DWORD PTR[((32-128))+r8]
@@ -434,7 +421,7 @@ $L$SEH_begin_AES_encrypt::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -501,7 +488,7 @@ AES_encrypt	ENDP
 
 ALIGN	16
 _x86_64_AES_decrypt	PROC PRIVATE
-_CET_ENDBR
+
 	xor	eax,DWORD PTR[r15]
 	xor	ebx,DWORD PTR[4+r15]
 	xor	ecx,DWORD PTR[8+r15]
@@ -657,7 +644,7 @@ _x86_64_AES_decrypt	ENDP
 
 ALIGN	16
 _x86_64_AES_decrypt_compact	PROC PRIVATE
-_CET_ENDBR
+
 	lea	r8,QWORD PTR[128+r14]
 	mov	edi,DWORD PTR[((0-128))+r8]
 	mov	ebp,DWORD PTR[((32-128))+r8]
@@ -897,7 +884,7 @@ $L$SEH_begin_AES_decrypt::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -976,7 +963,7 @@ $L$SEH_begin_AES_set_encrypt_key::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -1005,7 +992,7 @@ AES_set_encrypt_key	ENDP
 
 ALIGN	16
 _x86_64_AES_set_encrypt_key	PROC PRIVATE
-_CET_ENDBR
+
 	mov	ecx,esi
 	mov	rsi,rdi
 	mov	rdi,rdx
@@ -1255,7 +1242,7 @@ $L$SEH_begin_AES_set_decrypt_key::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -1463,7 +1450,7 @@ $L$SEH_begin_AES_cbc_encrypt::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	cmp	rdx,0
 	je	$L$cbc_epilogue
 	pushfq
@@ -2709,7 +2696,7 @@ EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 block_se_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx
@@ -2768,7 +2755,7 @@ block_se_handler	ENDP
 
 ALIGN	16
 key_se_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx
@@ -2826,7 +2813,7 @@ key_se_handler	ENDP
 
 ALIGN	16
 cbc_se_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx

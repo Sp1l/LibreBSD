@@ -7,20 +7,7 @@
 ; 1 "crypto/bn/modexp512-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/bn/modexp512-masm-x86_64.S.tmp" 2
 
 
 
@@ -91,7 +78,7 @@ OPTION	DOTNAME
 
 ALIGN	16
 MULADD_128x512	PROC PRIVATE
-_CET_ENDBR
+
 	mov	rax,QWORD PTR[rsi]
 	mul	rbp
 	add	r8,rax
@@ -222,7 +209,7 @@ MULADD_128x512	ENDP
 
 ALIGN	16
 mont_reduce	PROC PRIVATE
-_CET_ENDBR
+
 	lea	rdi,QWORD PTR[192+rsp]
 	mov	rsi,QWORD PTR[32+rsp]
 	add	rsi,576
@@ -666,7 +653,7 @@ mont_reduce	ENDP
 
 ALIGN	16
 mont_mul_a3b	PROC PRIVATE
-_CET_ENDBR
+
 
 
 
@@ -1173,7 +1160,7 @@ mont_mul_a3b	ENDP
 
 ALIGN	16
 sqr_reduce	PROC PRIVATE
-_CET_ENDBR
+
 	mov	rcx,QWORD PTR[16+rsp]
 
 
@@ -1567,7 +1554,7 @@ $L$SEH_begin_mod_exp_512::
 	mov	rcx,r9
 
 
-_CET_ENDBR
+
 	push	rbp
 	push	rbx
 	push	r12

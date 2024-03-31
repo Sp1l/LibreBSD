@@ -1493,12 +1493,11 @@ EXTRA_DIST = CMakeLists.txt aeadtest.sh aeadtests.txt \
 	rfc5280time_small.test servertest.sh servertest.bat ssltest.sh \
 	ssltest.bat testssl testssl.bat ca-int-ecdsa.crl \
 	ca-int-ecdsa.pem ca-int-rsa.crl ca-int-rsa.pem \
-	ca-root-ecdsa.pem ca-root-rsa.pem ca.pem client.pem \
-	client1-ecdsa-chain.pem client1-ecdsa.pem \
-	client1-rsa-chain.pem client1-rsa.pem client2-ecdsa-chain.pem \
-	client2-ecdsa.pem client2-rsa-chain.pem client2-rsa.pem \
-	client3-ecdsa-chain.pem client3-ecdsa.pem \
-	client3-rsa-chain.pem client3-rsa.pem server.pem \
+	ca-root-ecdsa.pem ca-root-rsa.pem client1-ecdsa-chain.pem \
+	client1-ecdsa.pem client1-rsa-chain.pem client1-rsa.pem \
+	client2-ecdsa-chain.pem client2-ecdsa.pem \
+	client2-rsa-chain.pem client2-rsa.pem client3-ecdsa-chain.pem \
+	client3-ecdsa.pem client3-rsa-chain.pem client3-rsa.pem \
 	server1-ecdsa-chain.pem server1-ecdsa.pem \
 	server1-rsa-chain.pem server1-rsa.pem server2-ecdsa-chain.pem \
 	server2-ecdsa.pem server2-rsa-chain.pem server2-rsa.pem \

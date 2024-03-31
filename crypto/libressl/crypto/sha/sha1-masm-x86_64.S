@@ -7,20 +7,7 @@
 ; 1 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/sha/sha1-masm-x86_64.S.tmp" 2
 
 
 
@@ -103,7 +90,7 @@ $L$SEH_begin_sha1_block_data_order::
 	mov	rdx,r8
 
 
-_CET_ENDBR
+
 	mov	r9d,DWORD PTR[((OPENSSL_ia32cap_P+0))]
 	mov	r8d,DWORD PTR[((OPENSSL_ia32cap_P+4))]
 	test	r8d,(1 SHL 9)
@@ -1403,7 +1390,7 @@ $L$SEH_begin_sha1_block_data_order_ssse3::
 
 
 _ssse3_shortcut::
-_CET_ENDBR
+
 	push	rbx
 	push	rbp
 	push	r12
@@ -2617,7 +2604,7 @@ EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 se_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx

@@ -7,20 +7,7 @@
 ; 1 "crypto/bn/mont5-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/bn/mont5-masm-x86_64.S.tmp" 2
 
 
 
@@ -104,7 +91,7 @@ $L$SEH_begin_bn_mul_mont_gather5::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	test	r9d,3
 	jnz	$L$mul_enter
 	cmp	r9d,8
@@ -515,7 +502,7 @@ $L$SEH_begin_bn_mul4x_mont_gather5::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 $L$mul4x_enter::
 	mov	r9d,r9d
 	movd	xmm5,DWORD PTR[56+rsp]
@@ -1109,7 +1096,7 @@ PUBLIC	bn_scatter5
 
 ALIGN	16
 bn_scatter5	PROC PUBLIC
-_CET_ENDBR
+
 	cmp	rdx,0
 	jz	$L$scatter_epilogue
 	lea	r8,QWORD PTR[r9*8+r8]
@@ -1128,7 +1115,7 @@ PUBLIC	bn_gather5
 
 ALIGN	16
 bn_gather5	PROC PUBLIC
-_CET_ENDBR
+
 $L$SEH_begin_bn_gather5::
 
 DB	04ch,08dh,014h,024h			
@@ -1300,7 +1287,7 @@ EXTERN	__imp_RtlVirtualUnwind:NEAR
 
 ALIGN	16
 mul_handler	PROC PRIVATE
-_CET_ENDBR
+
 	push	rsi
 	push	rdi
 	push	rbx

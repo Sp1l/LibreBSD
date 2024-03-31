@@ -7,20 +7,7 @@
 ; 1 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
 OPTION	DOTNAME
 
-; 1 "./include/compat/cet.h" 1
 
-
-
-   
-
-
-
-
-
-; 18 "./include/compat/cet.h"
-
-
-; 4 "crypto/rc4/rc4-md5-masm-x86_64.S.tmp" 2
 
 
 
@@ -104,7 +91,7 @@ $L$SEH_begin_rc4_md5_enc::
 	mov	r9,QWORD PTR[48+rsp]
 
 
-_CET_ENDBR
+
 	cmp	r9,0
 	je	$L$abort
 	push	rbx

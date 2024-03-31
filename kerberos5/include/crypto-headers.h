@@ -20,7 +20,7 @@
 #include <openssl/ecdh.h>
 #if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
 #include <openssl/provider.h>
-#include "fbsd_ossl_provider.h"
 #endif
+#include "fbsd_ossl_provider.h"
 
 #endif /* __crypto_headers_h__ */

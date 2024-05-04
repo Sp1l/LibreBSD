@@ -2,7 +2,7 @@
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	3.8.4
+OPENSSL_VER=	3.9.1
 OPENSSL_DATE=	2024-03-27
 
 LIBRESSL_SRC=	${SRCTOP}/crypto/libressl
@@ -15,6 +15,8 @@ CFLAGS+=	-DLIBRESSL_INTERNAL
 CFLAGS+=	-D__BEGIN_HIDDEN_DECLS= -D__END_HIDDEN_DECLS=
 CFLAGS+=	-DOPENSSLDIR="\"/etc/ssl\""
 CFLAGS+=	-D_FORTIFY_SOURCE=2
+# HARDEN_FLAGS from port output
+CFLAGS+=	-fno-strict-overflow -fstack-protector-strong -fcf-protection=full
 
 # LibreSSL compat from ports build
 # include/compat/arpa/nameser.h
@@ -31,6 +33,7 @@ CFLAGS+=	-DHAVE_POLL=1
 # include/compat/resolv.h
 CFLAGS+=	-DHAVE_RESOLV_H=1
 # include/compat/readpassphrase.h
+CFLAGS+=	-DHAVE_READPASSPHRASE=1
 CFLAGS+=	-DHAVE_READPASSPHRASE_H=1
 # include/compat/stdlib.h
 CFLAGS+= \
@@ -42,6 +45,7 @@ CFLAGS+= \
 # include/compat/string.h
 CFLAGS+= \
 	-DHAVE_EXPLICIT_BZERO=1 \
+	-DHAVE_STRCASECMP=1 \
 	-DHAVE_MEMMEM=1 \
 	-DHAVE_STRLCAT=1 \
 	-DHAVE_STRLCPY=1 \
@@ -74,6 +78,7 @@ CFLAGS+=	-DHAVE_ACCEPT4=1
 # Generated in ports build, not referenced / unreachable
 CFLAGS+= \
 	-DHAVE_DL_ITERATE_PHDR=1 \
+	-DHAVE_DLFCN_H=1 \
 	-DHAVE_INTTYPES_H=1 \
 	-DHAVE_NETDB_H=1 \
 	-DHAVE_NETINET_IN_H=1 \
@@ -87,6 +92,7 @@ CFLAGS+= \
 	-DHAVE_SYMLINK=1 \
 	-DHAVE_SYS_STAT_H=1 \
 	-DHAVE_SYS_TYPES_H=1 \
+	-DSTDC_HEADERS=1
 
 LDADD+=	-lthr
 

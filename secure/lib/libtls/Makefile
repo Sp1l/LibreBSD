@@ -18,7 +18,7 @@ CFLAGS+= -Werror
 CFLAGS+= -DLIBRESSL_INTERNAL
 
 LIB=	tls
-SHLIB_MAJOR=	28
+SHLIB_MAJOR=	29
 
 ##LibreBSD: FreeBSD doesn't use DPADD / LDADD
 LIBADD= crypto ssl

@@ -711,7 +711,6 @@ $L$outer_loop::
 	xor	r9,r13
 	shr	r8,8
 	movzx	r12,r12b
-	mov	edx,DWORD PTR[((-4))+rdi]
 	shr	r9,8
 	xor	r8,QWORD PTR[((-128))+rbx*8+rbp]
 	shl	r10,56

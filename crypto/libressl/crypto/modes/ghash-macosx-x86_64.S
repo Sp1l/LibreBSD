@@ -622,7 +622,6 @@ L$outer_loop:
 	xorq	%r13,%r9
 	shrq	$8,%r8
 	movzbq	%r12b,%r12
-	movl	-4(%rdi),%edx
 	shrq	$8,%r9
 	xorq	-128(%rbp,%rbx,8),%r8
 	shlq	$56,%r10

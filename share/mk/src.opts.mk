@@ -433,6 +433,11 @@ MK_LOADER_ZFS:=	no
 MK_ZFS:=	no
 .endif
 
+.if ${MK_LIBRESSL} == "yes"
+MK_KERBEROS:=	no
+MK_KERBEROS_SUPPORT:=	no
+.endif
+
 .if ${MK_LDNS} == "no"
 MK_LDNS_UTILS:=	no
 MK_UNBOUND:= no

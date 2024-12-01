@@ -209,6 +209,7 @@ _LIBRARIES=	\
 		termcapw \
 		tinfow \
 		tpool \
+		tls \
 		ufs \
 		ugidfw \
 		ulog \
@@ -298,6 +299,7 @@ _DP_archive+=	md
 .endif
 _DP_sqlite3=	pthread
 _DP_ssl=	crypto
+_DP_tls=	crypto ssl
 _DP_ssh=	crypto crypt z
 .if ${MK_LDNS} != "no"
 _DP_ssh+=	ldns
@@ -759,6 +761,7 @@ LIBCRYPTODIR=	${_LIB_OBJTOP}/secure/lib/libcrypto
 LIBSPLDIR=	${_LIB_OBJTOP}/cddl/lib/libspl
 LIBSSHDIR=	${_LIB_OBJTOP}/secure/lib/libssh
 LIBSSLDIR=	${_LIB_OBJTOP}/secure/lib/libssl
+LIBTLSDIR=	${_LIB_OBJTOP}/secure/lib/libtls
 LIBTEKENDIR=	${_LIB_OBJTOP}/sys/teken/libteken
 LIBEGACYDIR=	${_LIB_OBJTOP}/tools/build
 LIBLNDIR=	${_LIB_OBJTOP}/usr.bin/lex/lib

@@ -266,7 +266,9 @@
 /* #undef HAVE_BLOWFISH_STREAM2WORD */
 
 /* Define to 1 if you have the 'BN_is_prime_ex' function. */
+#ifndef WITH_LIBRESSL
 #define HAVE_BN_IS_PRIME_EX 1
+#endif
 
 /* Define to 1 if you have the <bsd/libutil.h> header file. */
 /* #undef HAVE_BSD_LIBUTIL_H */
@@ -491,18 +493,24 @@
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_get_iv' function. */
 /* #undef HAVE_EVP_CIPHER_CTX_GET_IV */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_CIPHER_CTX_GET_IV 1
+#endif
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_get_updated_iv' function. */
-#define HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV 1
+/* #undef HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV */
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_iv' function. */
-#define HAVE_EVP_CIPHER_CTX_IV 1
+/* #undef HAVE_EVP_CIPHER_CTX_IV */
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_iv_noconst' function. */
-#define HAVE_EVP_CIPHER_CTX_IV_NOCONST 1
+/* #undef HAVE_EVP_CIPHER_CTX_IV_NOCONST */
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_set_iv' function. */
 /* #undef HAVE_EVP_CIPHER_CTX_SET_IV */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_CIPHER_CTX_SET_IV 1
+#endif
 
 /* Define to 1 if you have the 'EVP_DigestFinal_ex' function. */
 #define HAVE_EVP_DIGESTFINAL_EX 1
@@ -512,12 +520,18 @@
 
 /* Define to 1 if you have the 'EVP_MD_CTX_cleanup' function. */
 /* #undef HAVE_EVP_MD_CTX_CLEANUP */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_MD_CTX_CLEANUP 1
+#endif
 
 /* Define to 1 if you have the 'EVP_MD_CTX_copy_ex' function. */
 #define HAVE_EVP_MD_CTX_COPY_EX 1
 
 /* Define to 1 if you have the 'EVP_MD_CTX_init' function. */
 /* #undef HAVE_EVP_MD_CTX_INIT */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_MD_CTX_INIT 1
+#endif
 
 /* Define to 1 if you have the 'EVP_PKEY_get_raw_private_key' function. */
 #define HAVE_EVP_PKEY_GET_RAW_PRIVATE_KEY 1

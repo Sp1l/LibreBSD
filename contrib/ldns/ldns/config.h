@@ -36,6 +36,9 @@
 
 /* Define to 1 if you have the `CRYPTO_cleanup_all_ex_data' function. */
 /* #undef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA */
+#ifdef WITH_LIBRESSL
+#define HAVE_CRYPTO_CLEANUP_ALL_EX_DATA 1
+#endif
 
 /* Define to 1 if you have the `CRYPTO_memcmp' function. */
 #define HAVE_CRYPTO_MEMCMP 1
@@ -59,7 +62,11 @@
 
 /* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
    don't. */
+#ifdef WITH_LIBRESSL
+#define HAVE_DECL_NID_ED448 0
+#else
 #define HAVE_DECL_NID_ED448 1
+#endif
 
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
@@ -95,18 +102,31 @@
 
 /* Define to 1 if you have the `ENGINE_cleanup' function. */
 /* #undef HAVE_ENGINE_CLEANUP */
+#ifdef WITH_LIBRESSL
+#define HAVE_ENGINE_CLEANUP 1
+#endif
 
 /* Define to 1 if you have the `ENGINE_free' function. */
 #define HAVE_ENGINE_FREE 1
 
 /* Define to 1 if you have the `ERR_free_strings' function. */
 /* #undef HAVE_ERR_FREE_STRINGS */
+#ifdef WITH_LIBRESSL
+#define HAVE_ERR_FREE_STRINGS
+#endif
+
 
 /* Define to 1 if you have the `ERR_load_crypto_strings' function. */
 /* #undef HAVE_ERR_LOAD_CRYPTO_STRINGS */
+#ifdef WITH_LIBRESSL
+#define HAVE_ERR_LOAD_CRYPTO_STRINGS 1
+#endif
 
 /* Define to 1 if you have the `EVP_cleanup' function. */
 /* #undef HAVE_EVP_CLEANUP */
+#ifdef WITH_LIBRESSL
+#define HAVE_EVP_CLEANUP 1
+#endif
 
 /* Define to 1 if you have the `EVP_dss1' function. */
 /* #undef HAVE_EVP_DSS1 */
@@ -176,6 +196,9 @@
 
 /* Define if we have LibreSSL */
 /* #undef HAVE_LIBRESSL */
+#ifdef WITH_LIBRESSL
+#define HAVE_LIBRESSL 1
+#endif
 
 /* Define to 1 if you have the `localtime_r' function. */
 #define HAVE_LOCALTIME_R 1
@@ -417,7 +440,9 @@
 #define USE_DANE 1
 
 /* Define this to enable DANE-TA usage type support. */
+#ifndef WITH_LIBRESSL
 #define USE_DANE_TA_USAGE 1
+#endif
 
 /* Define this to enable DANE verify support. */
 #define USE_DANE_VERIFY 1
@@ -432,7 +457,9 @@
 #define USE_ED25519 1
 
 /* Define this to enable ED448 support. */
+#ifndef WITH_LIBRESSL
 #define USE_ED448 1
+#endif
 
 /* Define this to enable GOST support. */
 /* #undef USE_GOST */

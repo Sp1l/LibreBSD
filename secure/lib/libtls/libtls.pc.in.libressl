@@ -1,0 +1,13 @@
+#libtls pkg-config source file
+
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: LibreSSL-libtls
+Description: Secure communications using the TLS socket protocol.
+Version: @openssl_ver@
+Libs: -L${libdir} -ltls
+Libs.private: -lssl -lcrypto
+Cflags: -I${includedir}

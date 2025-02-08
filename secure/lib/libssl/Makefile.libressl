@@ -3,6 +3,7 @@ LIB=	ssl
 SHLIB_MAJOR=	58
 
 NO_LINT=
+PCFILES=	${.CURDIR}/lib${LIB}.pc
 
 .if exists(Makefile.man.libressl)
 .include "Makefile.man.libressl"

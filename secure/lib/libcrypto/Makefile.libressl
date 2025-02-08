@@ -8,6 +8,7 @@ LIB=            crypto
 SHLIB_MAJOR=    55
 
 NO_LINT=
+PCFILES=	libcrypto.pc
 
 .if exists(Makefile.man.libressl)
 .include "Makefile.man.libressl"

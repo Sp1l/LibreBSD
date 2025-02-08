@@ -107,3 +107,9 @@ _docs=	apps
 _skip=	config
 _sec=	1
 .endif
+
+.for pcfile in ${PCFILES}
+${pcfile}:      ${pcfile}.in.libressl
+	sed -e 's,@openssl_ver@,${OPENSSL_VER},g' ${.ALLSRC} > ${.TARGET}
+.endfor
+CLEANFILES+=    ${PCFILES}
